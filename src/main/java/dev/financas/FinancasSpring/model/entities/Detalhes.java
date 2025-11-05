@@ -14,7 +14,7 @@ import java.time.LocalDate;
         @Index(name = "idx_usuario_detalhes_usuario_id", columnList = "usuario_id"),
         @Index(name = "idx_usuario_detalhes_cpf", columnList = "cpf")
 })
-public class UsuarioDetalhes {
+public class Detalhes {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

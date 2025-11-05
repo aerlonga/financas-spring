@@ -35,11 +35,11 @@ public class UsuarioCreateDTO {
     private Usuario.Role role = Usuario.Role.USER;
 
     @Valid
-    private UsuarioDetalhesCreateDTO detalhes;
+    private DetalhesCreateDTO detalhes;
 
     @Valid
-    private UsuarioFinanceiroCreateDTO financeiro;
+    private FinanceiroCreateDTO financeiro;
 
     @Valid
-    private UsuarioPreferenciasCreateDTO preferencias;
+    private PreferenciasCreateDTO preferencias;
 }

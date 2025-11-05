@@ -1,19 +1,19 @@
 package dev.financas.FinancasSpring.rest.mapper;
 
-import dev.financas.FinancasSpring.model.entities.UsuarioFinanceiro;
-import dev.financas.FinancasSpring.rest.dto.UsuarioFinanceiroCreateDTO;
-import dev.financas.FinancasSpring.rest.dto.UsuarioFinanceiroResponseDTO;
-import dev.financas.FinancasSpring.rest.dto.UsuarioFinanceiroUpdateDTO;
+import dev.financas.FinancasSpring.model.entities.Financeiro;
+import dev.financas.FinancasSpring.rest.dto.FinanceiroCreateDTO;
+import dev.financas.FinancasSpring.rest.dto.FinanceiroResponseDTO;
+import dev.financas.FinancasSpring.rest.dto.FinanceiroUpdateDTO;
 import org.springframework.stereotype.Component;
 
 @Component
-public class UsuarioFinanceiroMapper {
+public class FinanceiroMapper {
 
-    public UsuarioFinanceiro toEntity(UsuarioFinanceiroCreateDTO dto) {
+    public Financeiro toEntity(FinanceiroCreateDTO dto) {
         if (dto == null)
             return null;
 
-        return UsuarioFinanceiro.builder()
+        return Financeiro.builder()
                 .profissao(dto.getProfissao())
                 .rendaMensal(dto.getRendaMensal())
                 .tipoRenda(dto.getTipoRenda())
@@ -22,11 +22,11 @@ public class UsuarioFinanceiroMapper {
                 .build();
     }
 
-    public UsuarioFinanceiro toEntity(UsuarioFinanceiroUpdateDTO dto) {
+    public Financeiro toEntity(FinanceiroUpdateDTO dto) {
         if (dto == null)
             return null;
 
-        return UsuarioFinanceiro.builder()
+        return Financeiro.builder()
                 .profissao(dto.getProfissao())
                 .rendaMensal(dto.getRendaMensal())
                 .tipoRenda(dto.getTipoRenda())
@@ -35,11 +35,11 @@ public class UsuarioFinanceiroMapper {
                 .build();
     }
 
-    public UsuarioFinanceiroResponseDTO toResponseDTO(UsuarioFinanceiro entity) {
+    public FinanceiroResponseDTO toResponseDTO(Financeiro entity) {
         if (entity == null)
             return null;
 
-        return UsuarioFinanceiroResponseDTO.builder()
+        return FinanceiroResponseDTO.builder()
                 .id(entity.getId())
                 .profissao(entity.getProfissao())
                 .rendaMensal(entity.getRendaMensal())
@@ -49,7 +49,7 @@ public class UsuarioFinanceiroMapper {
                 .build();
     }
 
-    public void updateEntity(UsuarioFinanceiro entity, UsuarioFinanceiroUpdateDTO dto) {
+    public void updateEntity(Financeiro entity, FinanceiroUpdateDTO dto) {
         if (dto == null || entity == null)
             return;
 

@@ -12,7 +12,7 @@ import java.math.BigDecimal;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class UsuarioFinanceiroCreateDTO {
+public class FinanceiroCreateDTO {
 
     @Size(max = 50, message = "A profissão deve ter no máximo 50 caracteres.")
     private String profissao;

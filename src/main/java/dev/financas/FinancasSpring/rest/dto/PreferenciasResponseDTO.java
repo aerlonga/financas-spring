@@ -1,6 +1,6 @@
 package dev.financas.FinancasSpring.rest.dto;
 
-import dev.financas.FinancasSpring.model.entities.UsuarioPreferencias;
+import dev.financas.FinancasSpring.model.entities.Preferencias;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,9 +10,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class UsuarioPreferenciasResponseDTO {
+public class PreferenciasResponseDTO {
     private Long id;
-    private UsuarioPreferencias.TemaInterface temaInterface;
+    private Preferencias.TemaInterface temaInterface;
     private Boolean notificacoesAtivadas;
     private String moedaPreferida;
     private String avatarUrl;

@@ -1,6 +1,6 @@
 package dev.financas.FinancasSpring.rest.dto;
 
-import dev.financas.FinancasSpring.model.entities.UsuarioPreferencias;
+import dev.financas.FinancasSpring.model.entities.Preferencias;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -10,9 +10,9 @@ import org.hibernate.validator.constraints.URL;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class UsuarioPreferenciasCreateDTO {
+public class PreferenciasCreateDTO {
 
-    private UsuarioPreferencias.TemaInterface temaInterface;
+    private Preferencias.TemaInterface temaInterface;
 
     private Boolean notificacoesAtivadas;
 

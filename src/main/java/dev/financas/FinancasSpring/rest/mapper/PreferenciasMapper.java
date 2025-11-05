@@ -1,37 +1,37 @@
 package dev.financas.FinancasSpring.rest.mapper;
 
-import dev.financas.FinancasSpring.model.entities.UsuarioPreferencias;
-import dev.financas.FinancasSpring.rest.dto.UsuarioPreferenciasCreateDTO;
-import dev.financas.FinancasSpring.rest.dto.UsuarioPreferenciasResponseDTO;
-import dev.financas.FinancasSpring.rest.dto.UsuarioPreferenciasUpdateDTO;
+import dev.financas.FinancasSpring.model.entities.Preferencias;
+import dev.financas.FinancasSpring.rest.dto.PreferenciasCreateDTO;
+import dev.financas.FinancasSpring.rest.dto.PreferenciasResponseDTO;
+import dev.financas.FinancasSpring.rest.dto.PreferenciasUpdateDTO;
 import org.springframework.stereotype.Component;
 
 @Component
-public class UsuarioPreferenciasMapper {
+public class PreferenciasMapper {
 
-    public UsuarioPreferencias toEntity(UsuarioPreferenciasCreateDTO dto) {
+    public Preferencias toEntity(PreferenciasCreateDTO dto) {
         if (dto == null)
             return null;
 
-        UsuarioPreferencias entity = new UsuarioPreferencias();
+        Preferencias entity = new Preferencias();
         updateEntity(entity, dto);
         return entity;
     }
 
-    public UsuarioPreferencias toEntity(UsuarioPreferenciasUpdateDTO dto) {
+    public Preferencias toEntity(PreferenciasUpdateDTO dto) {
         if (dto == null)
             return null;
 
-        UsuarioPreferencias entity = new UsuarioPreferencias();
+        Preferencias entity = new Preferencias();
         updateEntity(entity, dto);
         return entity;
     }
 
-    public UsuarioPreferenciasResponseDTO toResponseDTO(UsuarioPreferencias entity) {
+    public PreferenciasResponseDTO toResponseDTO(Preferencias entity) {
         if (entity == null)
             return null;
 
-        return UsuarioPreferenciasResponseDTO.builder()
+        return PreferenciasResponseDTO.builder()
                 .id(entity.getId())
                 .temaInterface(entity.getTemaInterface())
                 .notificacoesAtivadas(entity.getNotificacoesAtivadas())
@@ -40,7 +40,7 @@ public class UsuarioPreferenciasMapper {
                 .build();
     }
 
-    public void updateEntity(UsuarioPreferencias entity, UsuarioPreferenciasUpdateDTO dto) {
+    public void updateEntity(Preferencias entity, PreferenciasUpdateDTO dto) {
         if (dto == null || entity == null)
             return;
 
@@ -54,7 +54,7 @@ public class UsuarioPreferenciasMapper {
             entity.setAvatarUrl(dto.getAvatarUrl());
     }
 
-    private void updateEntity(UsuarioPreferencias entity, UsuarioPreferenciasCreateDTO dto) {
+    private void updateEntity(Preferencias entity, PreferenciasCreateDTO dto) {
         if (dto.getTemaInterface() != null)
             entity.setTemaInterface(dto.getTemaInterface());
         if (dto.getNotificacoesAtivadas() != null)

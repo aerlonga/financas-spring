@@ -11,7 +11,7 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class UsuarioFinanceiroResponseDTO {
+public class FinanceiroResponseDTO {
     private Long id;
     private String profissao;
     private BigDecimal rendaMensal;

@@ -8,7 +8,7 @@ import lombok.Data;
 import java.time.LocalDate;
 
 @Data
-public class UsuarioDetalhesUpdateDTO {
+public class DetalhesUpdateDTO {
 
     @Past(message = "A data de nascimento deve ser no passado.")
     private LocalDate dataNascimento;

@@ -10,7 +10,7 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 @Table(name = "usuario_preferencias")
-public class UsuarioPreferencias {
+public class Preferencias {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

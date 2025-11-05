@@ -2,31 +2,31 @@ package dev.financas.FinancasSpring.services;
 
 import dev.financas.FinancasSpring.exceptions.ResourceNotFoundException;
 import dev.financas.FinancasSpring.model.entities.Usuario;
-import dev.financas.FinancasSpring.model.entities.UsuarioPreferencias;
-import dev.financas.FinancasSpring.model.repository.UsuarioPreferenciasRepository;
+import dev.financas.FinancasSpring.model.entities.Preferencias;
+import dev.financas.FinancasSpring.model.repository.PreferenciasRepository;
 import dev.financas.FinancasSpring.model.repository.UsuarioRepository;
-import dev.financas.FinancasSpring.rest.dto.UsuarioPreferenciasUpdateDTO;
-import dev.financas.FinancasSpring.rest.mapper.UsuarioPreferenciasMapper;
+import dev.financas.FinancasSpring.rest.dto.PreferenciasUpdateDTO;
+import dev.financas.FinancasSpring.rest.mapper.PreferenciasMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class UsuarioPreferenciasService {
+public class PreferenciasService {
 
     private final UsuarioRepository usuarioRepository;
-    private final UsuarioPreferenciasRepository usuarioPreferenciasRepository;
-    private final UsuarioPreferenciasMapper usuarioPreferenciasMapper;
+    private final PreferenciasRepository usuarioPreferenciasRepository;
+    private final PreferenciasMapper usuarioPreferenciasMapper;
 
-    public UsuarioPreferenciasService(UsuarioRepository usuarioRepository,
-            UsuarioPreferenciasRepository usuarioPreferenciasRepository,
-            UsuarioPreferenciasMapper usuarioPreferenciasMapper) {
+    public PreferenciasService(UsuarioRepository usuarioRepository,
+            PreferenciasRepository usuarioPreferenciasRepository,
+            PreferenciasMapper usuarioPreferenciasMapper) {
         this.usuarioRepository = usuarioRepository;
         this.usuarioPreferenciasRepository = usuarioPreferenciasRepository;
         this.usuarioPreferenciasMapper = usuarioPreferenciasMapper;
     }
 
     @Transactional(readOnly = true)
-    public UsuarioPreferencias findByUsuarioId(Long usuarioId) {
+    public Preferencias findByUsuarioId(Long usuarioId) {
         if (!usuarioRepository.existsById(usuarioId)) {
             throw new ResourceNotFoundException("Usuário não encontrado com o ID: " + usuarioId);
         }
@@ -36,11 +36,11 @@ public class UsuarioPreferenciasService {
     }
 
     @Transactional
-    public UsuarioPreferencias createOrUpdate(Long usuarioId, UsuarioPreferenciasUpdateDTO dto) {
+    public Preferencias createOrUpdate(Long usuarioId, PreferenciasUpdateDTO dto) {
         Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado com o ID: " + usuarioId));
 
-        UsuarioPreferencias preferencias = usuario.getPreferencias();
+        Preferencias preferencias = usuario.getPreferencias();
 
         if (preferencias == null) {
             preferencias = usuarioPreferenciasMapper.toEntity(dto);

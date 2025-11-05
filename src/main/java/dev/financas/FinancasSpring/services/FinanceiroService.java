@@ -2,31 +2,31 @@ package dev.financas.FinancasSpring.services;
 
 import dev.financas.FinancasSpring.exceptions.ResourceNotFoundException;
 import dev.financas.FinancasSpring.model.entities.Usuario;
-import dev.financas.FinancasSpring.model.entities.UsuarioFinanceiro;
-import dev.financas.FinancasSpring.model.repository.UsuarioFinanceiroRepository;
+import dev.financas.FinancasSpring.model.entities.Financeiro;
+import dev.financas.FinancasSpring.model.repository.FinanceiroRepository;
 import dev.financas.FinancasSpring.model.repository.UsuarioRepository;
-import dev.financas.FinancasSpring.rest.dto.UsuarioFinanceiroUpdateDTO;
-import dev.financas.FinancasSpring.rest.mapper.UsuarioFinanceiroMapper;
+import dev.financas.FinancasSpring.rest.dto.FinanceiroUpdateDTO;
+import dev.financas.FinancasSpring.rest.mapper.FinanceiroMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class UsuarioFinanceiroService {
+public class FinanceiroService {
 
     private final UsuarioRepository usuarioRepository;
-    private final UsuarioFinanceiroRepository usuarioFinanceiroRepository;
-    private final UsuarioFinanceiroMapper usuarioFinanceiroMapper;
+    private final FinanceiroRepository usuarioFinanceiroRepository;
+    private final FinanceiroMapper usuarioFinanceiroMapper;
 
-    public UsuarioFinanceiroService(UsuarioRepository usuarioRepository,
-            UsuarioFinanceiroRepository usuarioFinanceiroRepository,
-            UsuarioFinanceiroMapper usuarioFinanceiroMapper) {
+    public FinanceiroService(UsuarioRepository usuarioRepository,
+            FinanceiroRepository usuarioFinanceiroRepository,
+            FinanceiroMapper usuarioFinanceiroMapper) {
         this.usuarioRepository = usuarioRepository;
         this.usuarioFinanceiroRepository = usuarioFinanceiroRepository;
         this.usuarioFinanceiroMapper = usuarioFinanceiroMapper;
     }
 
     @Transactional(readOnly = true)
-    public UsuarioFinanceiro findByUsuarioId(Long usuarioId) {
+    public Financeiro findByUsuarioId(Long usuarioId) {
         if (!usuarioRepository.existsById(usuarioId)) {
             throw new ResourceNotFoundException("Usuário não encontrado com o ID: " + usuarioId);
         }
@@ -36,11 +36,11 @@ public class UsuarioFinanceiroService {
     }
 
     @Transactional
-    public UsuarioFinanceiro createOrUpdate(Long usuarioId, UsuarioFinanceiroUpdateDTO dto) {
+    public Financeiro createOrUpdate(Long usuarioId, FinanceiroUpdateDTO dto) {
         Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado com o ID: " + usuarioId));
 
-        UsuarioFinanceiro financeiro = usuario.getFinanceiro();
+        Financeiro financeiro = usuario.getFinanceiro();
 
         if (financeiro == null) {
             financeiro = usuarioFinanceiroMapper.toEntity(dto);

@@ -1,22 +1,22 @@
 package dev.financas.FinancasSpring.rest.controllers;
 
 import dev.financas.FinancasSpring.rest.dto.UsuarioCreateDTO;
-import dev.financas.FinancasSpring.rest.dto.UsuarioDetalhesResponseDTO;
-import dev.financas.FinancasSpring.rest.dto.UsuarioDetalhesUpdateDTO;
-import dev.financas.FinancasSpring.rest.dto.UsuarioFinanceiroResponseDTO;
-import dev.financas.FinancasSpring.rest.dto.UsuarioFinanceiroUpdateDTO;
-import dev.financas.FinancasSpring.rest.dto.UsuarioPreferenciasResponseDTO;
-import dev.financas.FinancasSpring.rest.dto.UsuarioPreferenciasUpdateDTO;
+import dev.financas.FinancasSpring.rest.dto.DetalhesResponseDTO;
+import dev.financas.FinancasSpring.rest.dto.DetalhesUpdateDTO;
+import dev.financas.FinancasSpring.rest.dto.FinanceiroResponseDTO;
+import dev.financas.FinancasSpring.rest.dto.FinanceiroUpdateDTO;
+import dev.financas.FinancasSpring.rest.dto.PreferenciasResponseDTO;
+import dev.financas.FinancasSpring.rest.dto.PreferenciasUpdateDTO;
 import dev.financas.FinancasSpring.rest.dto.UsuarioResponseDTO;
 import dev.financas.FinancasSpring.rest.dto.UsuarioUpdateDTO;
-import dev.financas.FinancasSpring.rest.mapper.UsuarioDetalhesMapper;
-import dev.financas.FinancasSpring.rest.mapper.UsuarioFinanceiroMapper;
-import dev.financas.FinancasSpring.rest.mapper.UsuarioPreferenciasMapper;
+import dev.financas.FinancasSpring.rest.mapper.DetalhesMapper;
+import dev.financas.FinancasSpring.rest.mapper.FinanceiroMapper;
+import dev.financas.FinancasSpring.rest.mapper.PreferenciasMapper;
 import dev.financas.FinancasSpring.rest.mapper.UsuarioMapper;
 import dev.financas.FinancasSpring.services.UsuarioService;
-import dev.financas.FinancasSpring.services.UsuarioDetalhesService;
-import dev.financas.FinancasSpring.services.UsuarioFinanceiroService;
-import dev.financas.FinancasSpring.services.UsuarioPreferenciasService;
+import dev.financas.FinancasSpring.services.DetalhesService;
+import dev.financas.FinancasSpring.services.FinanceiroService;
+import dev.financas.FinancasSpring.services.PreferenciasService;
 import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -37,21 +37,21 @@ public class UsuarioController {
 
     private final UsuarioService usuarioService;
     private final UsuarioMapper usuarioMapper;
-    private final UsuarioDetalhesService usuarioDetalhesService;
-    private final UsuarioDetalhesMapper usuarioDetalhesMapper;
-    private final UsuarioFinanceiroService usuarioFinanceiroService;
-    private final UsuarioFinanceiroMapper usuarioFinanceiroMapper;
-    private final UsuarioPreferenciasService usuarioPreferenciasService;
-    private final UsuarioPreferenciasMapper usuarioPreferenciasMapper;
+    private final DetalhesService usuarioDetalhesService;
+    private final DetalhesMapper usuarioDetalhesMapper;
+    private final FinanceiroService usuarioFinanceiroService;
+    private final FinanceiroMapper usuarioFinanceiroMapper;
+    private final PreferenciasService usuarioPreferenciasService;
+    private final PreferenciasMapper usuarioPreferenciasMapper;
 
     public UsuarioController(UsuarioService usuarioService,
             UsuarioMapper usuarioMapper,
-            UsuarioDetalhesService usuarioDetalhesService,
-            UsuarioDetalhesMapper usuarioDetalhesMapper,
-            UsuarioFinanceiroService usuarioFinanceiroService,
-            UsuarioFinanceiroMapper usuarioFinanceiroMapper,
-            UsuarioPreferenciasService usuarioPreferenciasService,
-            UsuarioPreferenciasMapper usuarioPreferenciasMapper) {
+            DetalhesService usuarioDetalhesService,
+            DetalhesMapper usuarioDetalhesMapper,
+            FinanceiroService usuarioFinanceiroService,
+            FinanceiroMapper usuarioFinanceiroMapper,
+            PreferenciasService usuarioPreferenciasService,
+            PreferenciasMapper usuarioPreferenciasMapper) {
         this.usuarioService = usuarioService;
         this.usuarioMapper = usuarioMapper;
         this.usuarioDetalhesService = usuarioDetalhesService;
@@ -141,7 +141,7 @@ public class UsuarioController {
             @ApiResponse(responseCode = "404", description = "Usuário ou detalhes não encontrados")
     })
     // @PreAuthorize("@securityUtil.isOwnerOrAdmin(#id)")
-    public ResponseEntity<UsuarioDetalhesResponseDTO> buscarDetalhesPorUsuarioId(@PathVariable Long id) {
+    public ResponseEntity<DetalhesResponseDTO> buscarDetalhesPorUsuarioId(@PathVariable Long id) {
         var detalhes = usuarioDetalhesService.findByUsuarioId(id);
         return ResponseEntity.ok(usuarioDetalhesMapper.toResponseDTO(detalhes));
     }
@@ -154,9 +154,9 @@ public class UsuarioController {
             @ApiResponse(responseCode = "404", description = "Usuário não encontrado")
     })
     // @PreAuthorize("@securityUtil.isOwnerOrAdmin(#id)")
-    public ResponseEntity<UsuarioDetalhesResponseDTO> criarOuAtualizarDetalhes(
+    public ResponseEntity<DetalhesResponseDTO> criarOuAtualizarDetalhes(
             @PathVariable Long id,
-            @Valid @RequestBody UsuarioDetalhesUpdateDTO dto) {
+            @Valid @RequestBody DetalhesUpdateDTO dto) {
         var detalhes = usuarioDetalhesService.createOrUpdate(id, dto);
         return ResponseEntity.ok(usuarioDetalhesMapper.toResponseDTO(detalhes));
     }
@@ -170,7 +170,7 @@ public class UsuarioController {
             @ApiResponse(responseCode = "404", description = "Usuário ou dados financeiros não encontrados")
     })
     // @PreAuthorize("@securityUtil.isOwnerOrAdmin(#id)")
-    public ResponseEntity<UsuarioFinanceiroResponseDTO> buscarFinanceiroPorUsuarioId(@PathVariable Long id) {
+    public ResponseEntity<FinanceiroResponseDTO> buscarFinanceiroPorUsuarioId(@PathVariable Long id) {
         var financeiro = usuarioFinanceiroService.findByUsuarioId(id);
         return ResponseEntity.ok(usuarioFinanceiroMapper.toResponseDTO(financeiro));
     }
@@ -183,9 +183,9 @@ public class UsuarioController {
             @ApiResponse(responseCode = "404", description = "Usuário não encontrado")
     })
     // @PreAuthorize("@securityUtil.isOwnerOrAdmin(#id)")
-    public ResponseEntity<UsuarioFinanceiroResponseDTO> criarOuAtualizarFinanceiro(
+    public ResponseEntity<FinanceiroResponseDTO> criarOuAtualizarFinanceiro(
             @PathVariable Long id,
-            @Valid @RequestBody UsuarioFinanceiroUpdateDTO dto) {
+            @Valid @RequestBody FinanceiroUpdateDTO dto) {
         var financeiro = usuarioFinanceiroService.createOrUpdate(id, dto);
         return ResponseEntity.ok(usuarioFinanceiroMapper.toResponseDTO(financeiro));
     }
@@ -199,7 +199,7 @@ public class UsuarioController {
             @ApiResponse(responseCode = "404", description = "Usuário ou preferências não encontradas")
     })
     // @PreAuthorize("@securityUtil.isOwnerOrAdmin(#id)")
-    public ResponseEntity<UsuarioPreferenciasResponseDTO> buscarPreferenciasPorUsuarioId(@PathVariable Long id) {
+    public ResponseEntity<PreferenciasResponseDTO> buscarPreferenciasPorUsuarioId(@PathVariable Long id) {
         var preferencias = usuarioPreferenciasService.findByUsuarioId(id);
         return ResponseEntity.ok(usuarioPreferenciasMapper.toResponseDTO(preferencias));
     }
@@ -212,9 +212,9 @@ public class UsuarioController {
             @ApiResponse(responseCode = "404", description = "Usuário não encontrado")
     })
     // @PreAuthorize("@securityUtil.isOwnerOrAdmin(#id)")
-    public ResponseEntity<UsuarioPreferenciasResponseDTO> criarOuAtualizarPreferencias(
+    public ResponseEntity<PreferenciasResponseDTO> criarOuAtualizarPreferencias(
             @PathVariable Long id,
-            @Valid @RequestBody UsuarioPreferenciasUpdateDTO dto) {
+            @Valid @RequestBody PreferenciasUpdateDTO dto) {
         var preferencias = usuarioPreferenciasService.createOrUpdate(id, dto);
         return ResponseEntity.ok(usuarioPreferenciasMapper.toResponseDTO(preferencias));
     }

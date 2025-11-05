@@ -11,7 +11,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class UsuarioDetalhesResponseDTO {
+public class DetalhesResponseDTO {
     private LocalDate dataNascimento;
     private String genero;
     private String telefone;

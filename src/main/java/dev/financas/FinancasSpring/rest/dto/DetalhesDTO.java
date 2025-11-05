@@ -10,7 +10,7 @@ import lombok.Data;
 import java.time.LocalDate;
 
 @Data
-public class UsuarioDetalhesDTO {
+public class DetalhesDTO {
 
     @Past(message = "A data de nascimento deve ser no passado.")
     private LocalDate dataNascimento;

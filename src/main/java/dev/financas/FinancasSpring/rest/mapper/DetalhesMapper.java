@@ -1,19 +1,19 @@
 package dev.financas.FinancasSpring.rest.mapper;
 
-import dev.financas.FinancasSpring.model.entities.UsuarioDetalhes;
-import dev.financas.FinancasSpring.rest.dto.UsuarioDetalhesCreateDTO;
-import dev.financas.FinancasSpring.rest.dto.UsuarioDetalhesResponseDTO;
-import dev.financas.FinancasSpring.rest.dto.UsuarioDetalhesUpdateDTO;
+import dev.financas.FinancasSpring.model.entities.Detalhes;
+import dev.financas.FinancasSpring.rest.dto.DetalhesCreateDTO;
+import dev.financas.FinancasSpring.rest.dto.DetalhesResponseDTO;
+import dev.financas.FinancasSpring.rest.dto.DetalhesUpdateDTO;
 import org.springframework.stereotype.Component;
 
 @Component
-public class UsuarioDetalhesMapper {
+public class DetalhesMapper {
 
-    public UsuarioDetalhes toEntity(UsuarioDetalhesCreateDTO dto) {
+    public Detalhes toEntity(DetalhesCreateDTO dto) {
         if (dto == null)
             return null;
 
-        return UsuarioDetalhes.builder()
+        return Detalhes.builder()
                 .dataNascimento(dto.getDataNascimento())
                 .genero(dto.getGenero())
                 .telefone(dto.getTelefone())
@@ -27,11 +27,11 @@ public class UsuarioDetalhesMapper {
                 .build();
     }
 
-    public UsuarioDetalhes toEntity(UsuarioDetalhesUpdateDTO dto) {
+    public Detalhes toEntity(DetalhesUpdateDTO dto) {
         if (dto == null)
             return null;
 
-        return UsuarioDetalhes.builder()
+        return Detalhes.builder()
                 .dataNascimento(dto.getDataNascimento())
                 .genero(dto.getGenero())
                 .telefone(dto.getTelefone())
@@ -45,11 +45,11 @@ public class UsuarioDetalhesMapper {
                 .build();
     }
 
-    public UsuarioDetalhesResponseDTO toResponseDTO(UsuarioDetalhes entity) {
+    public DetalhesResponseDTO toResponseDTO(Detalhes entity) {
         if (entity == null)
             return null;
 
-        return UsuarioDetalhesResponseDTO.builder()
+        return DetalhesResponseDTO.builder()
                 .dataNascimento(entity.getDataNascimento())
                 .genero(entity.getGenero())
                 .telefone(entity.getTelefone())
@@ -63,7 +63,7 @@ public class UsuarioDetalhesMapper {
                 .build();
     }
 
-    public void updateEntity(UsuarioDetalhes entity, UsuarioDetalhesUpdateDTO dto) {
+    public void updateEntity(Detalhes entity, DetalhesUpdateDTO dto) {
         if (dto == null || entity == null)
             return;
 
