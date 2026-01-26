@@ -17,8 +17,6 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
-
-import java.math.BigDecimal;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -70,22 +68,19 @@ public class UsuarioControllerTest {
     private CustomUserDetailsService customUserDetailsService;
 
     @MockBean
-    private UsuarioRepository usuarioRepository; // Adicionado para o EmailUnicoValidator
+    private UsuarioRepository usuarioRepository;
 
     @Test
     @WithMockUser
     public void deveCriarUsuarioComSucesso() throws Exception {
-        // Comportamento do validador
         when(usuarioRepository.findByEmail(anyString())).thenReturn(Optional.empty());
 
-        // Dados de entrada
         UsuarioCreateDTO createDTO = UsuarioCreateDTO.builder()
                 .nomeCompleto("Nome Teste")
                 .email("teste@email.com")
                 .senha("senha123")
                 .build();
 
-        // Mock do mapper e service
         Usuario usuario = Usuario.builder()
                 .id(1L)
                 .nomeCompleto("Nome Teste")
@@ -102,9 +97,8 @@ public class UsuarioControllerTest {
         when(usuarioService.save(any(Usuario.class))).thenReturn(usuario);
         when(usuarioMapper.toResponseDTO(any(Usuario.class))).thenReturn(responseDTO);
 
-        // Execução da requisição e verificação
         mockMvc.perform(post("/usuarios")
-                .with(csrf()) // Adiciona o token CSRF para o teste
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(createDTO)))
                 .andExpect(status().isCreated())
@@ -116,7 +110,6 @@ public class UsuarioControllerTest {
     @Test
     @WithMockUser
     public void deveBuscarUsuarioPorIdComSucesso() throws Exception {
-        // Dados de entrada
         Long usuarioId = 1L;
         Usuario usuario = Usuario.builder()
                 .id(usuarioId)
@@ -130,11 +123,9 @@ public class UsuarioControllerTest {
                 .email("teste@email.com")
                 .build();
 
-        // Mock do service e mapper
         when(usuarioService.findById(usuarioId)).thenReturn(usuario);
         when(usuarioMapper.toResponseDTO(usuario)).thenReturn(responseDTO);
 
-        // Execução da requisição e verificação
         mockMvc.perform(get("/usuarios/{id}", usuarioId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(usuarioId))

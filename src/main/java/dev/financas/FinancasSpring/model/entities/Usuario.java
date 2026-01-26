@@ -11,6 +11,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -83,7 +84,8 @@ public class Usuario implements UserDetails {
     @Setter(AccessLevel.NONE)
     @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @JsonIgnore
-    private List<Demandas> demandas;
+    @Builder.Default
+    private List<Demandas> demandas = new ArrayList<>();
 
     public void setDetalhes(Detalhes detalhes) {
         if (detalhes == null) {
@@ -128,6 +130,9 @@ public class Usuario implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
+        if (this.role == null) {
+            return List.of();
+        }
         return List.of(() -> "ROLE_" + role.name());
     }
 
