@@ -18,6 +18,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import java.util.Optional;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -239,5 +240,49 @@ public class UsuarioControllerTest {
                 .content(objectMapper.writeValueAsString(updateDTO)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.moedaPreferida").value("EUR"));
+    }
+
+    @Test
+    @WithMockUser
+    public void deveListarTodosUsuariosComSucesso() throws Exception {
+        Usuario usuario = Usuario.builder().id(1L).nomeCompleto("Teste").build();
+        UsuarioResponseDTO responseDTO = UsuarioResponseDTO.builder().id(1L).nomeCompleto("Teste").build();
+
+        when(usuarioService.findAll()).thenReturn(List.of(usuario));
+        when(usuarioMapper.toResponseDTO(usuario)).thenReturn(responseDTO);
+
+        mockMvc.perform(get("/usuarios"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(1L))
+                .andExpect(jsonPath("$[0].nomeCompleto").value("Teste"));
+    }
+
+    @Test
+    @WithMockUser
+    public void deveAtualizarUsuarioComSucesso() throws Exception {
+        Long id = 1L;
+        UsuarioUpdateDTO updateDTO = new UsuarioUpdateDTO();
+        updateDTO.setNomeCompleto("Nome Atualizado");
+
+        Usuario usuarioAtualizado = Usuario.builder().id(id).nomeCompleto("Nome Atualizado").build();
+        UsuarioResponseDTO responseDTO = UsuarioResponseDTO.builder().id(id).nomeCompleto("Nome Atualizado").build();
+
+        when(usuarioService.atualizar(eq(id), any(UsuarioUpdateDTO.class))).thenReturn(usuarioAtualizado);
+        when(usuarioMapper.toResponseDTO(usuarioAtualizado)).thenReturn(responseDTO);
+
+        mockMvc.perform(put("/usuarios/{id}", id)
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(updateDTO)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nomeCompleto").value("Nome Atualizado"));
+    }
+
+    @Test
+    @WithMockUser
+    public void deveDeletarUsuarioComSucesso() throws Exception {
+        mockMvc.perform(delete("/usuarios/{id}", 1L)
+                .with(csrf()))
+                .andExpect(status().isNoContent());
     }
 }
