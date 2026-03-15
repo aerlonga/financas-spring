@@ -4,9 +4,9 @@ services:
     container_name: postgres_financas
     restart: always
     environment:
-      POSTGRES_DB: financas
-      POSTGRES_USER: financas_user
-      POSTGRES_PASSWORD: financas_senha
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
@@ -30,9 +30,9 @@ services:
     environment:
       - JWT_SECRET=${JWT_SECRET}
       - JWT_EXPIRATION=${JWT_EXPIRATION}
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/financas
-      - SPRING_DATASOURCE_USERNAME=financas_user
-      - SPRING_DATASOURCE_PASSWORD=financas_senha
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/${DB_NAME}
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
       - SPRING_FLYWAY_ENABLED=true
 

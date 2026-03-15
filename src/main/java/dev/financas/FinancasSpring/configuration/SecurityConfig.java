@@ -41,7 +41,8 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
-                                "/swagger-resources/**")
+                                "/swagger-resources/**",
+                                "/api/telegram/confirmar")
                         .permitAll()
                         // Permite a criação de usuário (cadastro) sem autenticação
                         .requestMatchers(HttpMethod.POST, "/usuarios").permitAll()

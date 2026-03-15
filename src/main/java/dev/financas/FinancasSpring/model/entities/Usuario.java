@@ -87,6 +87,11 @@ public class Usuario implements UserDetails {
     @Builder.Default
     private List<Demandas> demandas = new ArrayList<>();
 
+    @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    @JsonIgnore
+    @Builder.Default
+    private List<TelegramVinculo> telegramVinculos = new ArrayList<>();
+
     public void setDetalhes(Detalhes detalhes) {
         if (detalhes == null) {
             if (this.detalhes != null) {
