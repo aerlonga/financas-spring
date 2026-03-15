@@ -1,6 +1,6 @@
 package dev.financas.FinancasSpring.anottation;
 
-import dev.financas.FinancasSpring.model.repository.UsuarioDetalhesRepository;
+import dev.financas.FinancasSpring.model.repository.DetalhesRepository;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 import org.springframework.stereotype.Component;
@@ -9,9 +9,9 @@ import org.springframework.util.StringUtils;
 @Component
 public class CpfUnicoValidator implements ConstraintValidator<CpfUnico, String> {
 
-    private final UsuarioDetalhesRepository usuarioDetalhesRepository;
+    private final DetalhesRepository usuarioDetalhesRepository;
 
-    public CpfUnicoValidator(UsuarioDetalhesRepository usuarioDetalhesRepository) {
+    public CpfUnicoValidator(DetalhesRepository usuarioDetalhesRepository) {
         this.usuarioDetalhesRepository = usuarioDetalhesRepository;
     }
 

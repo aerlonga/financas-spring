@@ -11,6 +11,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -68,19 +69,25 @@ public class Usuario implements UserDetails {
     @Setter(AccessLevel.NONE)
     @OneToOne(mappedBy = "usuario", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @JsonIgnore
-    private UsuarioDetalhes detalhes;
+    private Detalhes detalhes;
 
     @Setter(AccessLevel.NONE)
     @OneToOne(mappedBy = "usuario", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @JsonIgnore
-    private UsuarioFinanceiro financeiro;
+    private Financeiro financeiro;
 
     @Setter(AccessLevel.NONE)
     @OneToOne(mappedBy = "usuario", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @JsonIgnore
-    private UsuarioPreferencias preferencias;
+    private Preferencias preferencias;
 
-    public void setDetalhes(UsuarioDetalhes detalhes) {
+    @Setter(AccessLevel.NONE)
+    @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    @JsonIgnore
+    @Builder.Default
+    private List<Demandas> demandas = new ArrayList<>();
+
+    public void setDetalhes(Detalhes detalhes) {
         if (detalhes == null) {
             if (this.detalhes != null) {
                 this.detalhes.setUsuario(null);
@@ -91,7 +98,7 @@ public class Usuario implements UserDetails {
         this.detalhes = detalhes;
     }
 
-    public void setFinanceiro(UsuarioFinanceiro financeiro) {
+    public void setFinanceiro(Financeiro financeiro) {
         if (financeiro == null) {
             if (this.financeiro != null) {
                 this.financeiro.setUsuario(null);
@@ -102,7 +109,7 @@ public class Usuario implements UserDetails {
         this.financeiro = financeiro;
     }
 
-    public void setPreferencias(UsuarioPreferencias preferencias) {
+    public void setPreferencias(Preferencias preferencias) {
         if (preferencias == null) {
             if (this.preferencias != null) {
                 this.preferencias.setUsuario(null);
@@ -123,6 +130,9 @@ public class Usuario implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
+        if (this.role == null) {
+            return List.of();
+        }
         return List.of(() -> "ROLE_" + role.name());
     }
 

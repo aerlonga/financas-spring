@@ -15,9 +15,13 @@ import java.util.ArrayList;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestControllerAdvice
 public class RestExceptionHandler {
+
+        private static final Logger logger = LoggerFactory.getLogger(RestExceptionHandler.class);
 
         @ExceptionHandler(ResourceNotFoundException.class)
         public ResponseEntity<ApiErrorDTO> handleResourceNotFoundException(ResourceNotFoundException ex,
@@ -85,6 +89,8 @@ public class RestExceptionHandler {
 
         @ExceptionHandler(Exception.class)
         public ResponseEntity<ApiErrorDTO> handleGenericException(Exception ex, HttpServletRequest request) {
+                logger.error("Erro inesperado ao processar requisição: {} {}", request.getMethod(),
+                                request.getRequestURI(), ex);
                 String message = (ex instanceof IllegalStateException)
                                 ? ex.getMessage()
                                 : "Ocorreu um erro inesperado no servidor.";

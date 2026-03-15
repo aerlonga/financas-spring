@@ -1,9 +1,9 @@
 package dev.financas.FinancasSpring.rest.mapper;
 
 import dev.financas.FinancasSpring.model.entities.Usuario;
-import dev.financas.FinancasSpring.model.entities.UsuarioDetalhes;
-import dev.financas.FinancasSpring.model.entities.UsuarioFinanceiro;
-import dev.financas.FinancasSpring.model.entities.UsuarioPreferencias;
+import dev.financas.FinancasSpring.model.entities.Detalhes;
+import dev.financas.FinancasSpring.model.entities.Financeiro;
+import dev.financas.FinancasSpring.model.entities.Preferencias;
 import dev.financas.FinancasSpring.rest.dto.UsuarioCreateDTO;
 import dev.financas.FinancasSpring.rest.dto.UsuarioResponseDTO;
 import dev.financas.FinancasSpring.rest.dto.UsuarioUpdateDTO;
@@ -15,14 +15,14 @@ import org.springframework.stereotype.Component;
 public class UsuarioMapper {
 
     private final PasswordEncoder passwordEncoder;
-    private final UsuarioDetalhesMapper usuarioDetalhesMapper;
-    private final UsuarioFinanceiroMapper usuarioFinanceiroMapper;
-    private final UsuarioPreferenciasMapper usuarioPreferenciasMapper;
+    private final DetalhesMapper usuarioDetalhesMapper;
+    private final FinanceiroMapper usuarioFinanceiroMapper;
+    private final PreferenciasMapper usuarioPreferenciasMapper;
 
     public UsuarioMapper(PasswordEncoder passwordEncoder,
-            UsuarioDetalhesMapper usuarioDetalhesMapper,
-            UsuarioFinanceiroMapper usuarioFinanceiroMapper,
-            UsuarioPreferenciasMapper usuarioPreferenciasMapper) {
+            DetalhesMapper usuarioDetalhesMapper,
+            FinanceiroMapper usuarioFinanceiroMapper,
+            PreferenciasMapper usuarioPreferenciasMapper) {
         this.passwordEncoder = passwordEncoder;
         this.usuarioDetalhesMapper = usuarioDetalhesMapper;
         this.usuarioFinanceiroMapper = usuarioFinanceiroMapper;
@@ -39,17 +39,17 @@ public class UsuarioMapper {
                 .build();
 
         if (dto.getDetalhes() != null) {
-            UsuarioDetalhes detalhes = usuarioDetalhesMapper.toEntity(dto.getDetalhes());
+            Detalhes detalhes = usuarioDetalhesMapper.toEntity(dto.getDetalhes());
             usuario.setDetalhes(detalhes);
             detalhes.setUsuario(usuario);
         }
         if (dto.getFinanceiro() != null) {
-            UsuarioFinanceiro financeiro = usuarioFinanceiroMapper.toEntity(dto.getFinanceiro());
+            Financeiro financeiro = usuarioFinanceiroMapper.toEntity(dto.getFinanceiro());
             usuario.setFinanceiro(financeiro);
             financeiro.setUsuario(usuario);
         }
         if (dto.getPreferencias() != null) {
-            UsuarioPreferencias preferencias = usuarioPreferenciasMapper.toEntity(dto.getPreferencias());
+            Preferencias preferencias = usuarioPreferenciasMapper.toEntity(dto.getPreferencias());
             usuario.setPreferencias(preferencias);
             preferencias.setUsuario(usuario);
         }

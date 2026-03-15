@@ -33,9 +33,9 @@ public class UsuarioUpdateDTO {
     private Usuario.Role role;
 
     @Valid
-    private UsuarioDetalhesUpdateDTO detalhes;
+    private DetalhesUpdateDTO detalhes;
     @Valid
-    private UsuarioFinanceiroUpdateDTO financeiro;
+    private FinanceiroUpdateDTO financeiro;
     @Valid
-    private UsuarioPreferenciasUpdateDTO preferencias;
+    private PreferenciasUpdateDTO preferencias;
 }
