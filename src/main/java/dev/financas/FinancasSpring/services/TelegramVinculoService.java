@@ -93,4 +93,16 @@ public class TelegramVinculoService {
         log.info("[Vinculo] Novo usuário registrado e vinculado via Telegram: {} ({})", email, chatId);
         return novoUsuario;
     }
+
+    /**
+     * Desvincula uma conta do Telegram, marcando o usuario como nulo.
+     */
+    @Transactional
+    public void desvincular(String chatId) {
+        repository.findByChatId(chatId).ifPresent(vinculo -> {
+            vinculo.setUsuario(null);
+            repository.save(vinculo);
+            log.info("[Vinculo] ChatId {} deslogado com sucesso.", chatId);
+        });
+    }
 }

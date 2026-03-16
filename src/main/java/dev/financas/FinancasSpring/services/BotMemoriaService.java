@@ -45,27 +45,54 @@ public class BotMemoriaService {
 
         @Override
         public List<ChatMessage> getMessages(Object memoryId) {
-            return repository.findTop20ByChatIdOrderByCriadoEmAsc(chatId)
-                .stream()
-                .map(m -> "user".equals(m.getRole())
-                    ? (ChatMessage) UserMessage.from(m.getConteudo())
-                    : (ChatMessage) AiMessage.from(m.getConteudo()))
+            List<BotMemoria> memorias = repository.findTop20ByChatIdOrderByCriadoEmDesc(chatId);
+            // Inverte a lista para que as mensagens fiquem em ordem cronológica (mais antiga primeiro)
+            java.util.Collections.reverse(memorias);
+            
+            return memorias.stream()
+                .map(m -> {
+                    try {
+                        return dev.langchain4j.data.message.ChatMessageDeserializer.messageFromJson(m.getConteudo());
+                    } catch (Exception ex) {
+                        return "user".equals(m.getRole())
+                            ? (ChatMessage) UserMessage.from(m.getConteudo())
+                            : (ChatMessage) AiMessage.from(m.getConteudo());
+                    }
+                })
                 .collect(Collectors.toList());
         }
 
         @Override
         @Transactional
         public void updateMessages(Object memoryId, List<ChatMessage> messages) {
-            // Persiste apenas a última mensagem nova (não duplica)
-            if (!messages.isEmpty()) {
-                ChatMessage ultima = messages.get(messages.size() - 1);
-                BotMemoria memoria = BotMemoria.builder()
-                    .chatId(chatId)
-                    .role(ultima instanceof UserMessage ? "user" : "assistant")
-                    .conteudo(ultima.text())
-                    .build();
-                repository.save(memoria);
+            // Persiste apenas se houver novas mensagens
+            if (messages.isEmpty()) return;
+
+            ChatMessage ultimaMsg = messages.get(messages.size() - 1);
+            String conteudo;
+            try {
+                conteudo = dev.langchain4j.data.message.ChatMessageSerializer.messageToJson(ultimaMsg);
+            } catch(Exception ex) {
+                conteudo = ultimaMsg.text() != null ? ultimaMsg.text() : "{}";
             }
+            
+            String role = (ultimaMsg instanceof UserMessage) ? "user" : "assistant";
+
+            // Verifica se a última mensagem no banco é igual para evitar duplicidade
+            List<BotMemoria> ultimaNoBanco = repository.findTop20ByChatIdOrderByCriadoEmDesc(chatId);
+            if (!ultimaNoBanco.isEmpty()) {
+                BotMemoria m = ultimaNoBanco.get(0);
+                if (m.getConteudo().equals(conteudo) && m.getRole().equals(role)) {
+                    return; // Já cadastrado
+                }
+            }
+
+            BotMemoria memoria = BotMemoria.builder()
+                .chatId(chatId)
+                .role(role)
+                .conteudo(conteudo)
+                .build();
+            repository.save(memoria);
         }
 
         @Override

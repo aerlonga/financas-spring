@@ -11,7 +11,7 @@ import java.util.List;
 public interface BotMemoriaRepository extends JpaRepository<BotMemoria, Long> {
 
     // Retorna as últimas N mensagens de um chat (para reconstruir contexto)
-    List<BotMemoria> findTop20ByChatIdOrderByCriadoEmAsc(String chatId);
+    List<BotMemoria> findTop20ByChatIdOrderByCriadoEmDesc(String chatId);
 
     // Para o scheduler de limpeza
     @Modifying

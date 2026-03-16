@@ -13,8 +13,6 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Component
@@ -31,7 +29,7 @@ public class FinanceiroBot extends TelegramLongPollingBot {
     @Value("${server.port:8080}")
     private int serverPort;
 
-    private final Set<String> usuariosApresentados = ConcurrentHashMap.newKeySet();
+
 
     @jakarta.annotation.PostConstruct
     public void init() {
@@ -81,6 +79,14 @@ public class FinanceiroBot extends TelegramLongPollingBot {
             return;
         }
 
+        // Comando /deslogar
+        if ("/deslogar".equalsIgnoreCase(texto.trim()) || "!deslogar".equalsIgnoreCase(texto.trim())) {
+            vinculoService.desvincular(chatId);
+            sessionManager.limpar(chatId);
+            enviar(chatId, "✅ Conta deslogada com sucesso! Você pode realizar o login novamente enviando qualquer mensagem. 👋");
+            return;
+        }
+
         // Verifica se o usuário já está autenticado no sistema
         TelegramVinculo vinculo = vinculoService.obterOuCriar(chatId, nome);
 
@@ -92,17 +98,6 @@ public class FinanceiroBot extends TelegramLongPollingBot {
 
         try {
             String resposta = aiService.processar(chatId, nome, texto);
-
-            if (!usuariosApresentados.contains(chatId)) {
-                usuariosApresentados.add(chatId);
-                resposta = String.format(
-                    "Olá, *%s*! 👋\n\nSou sua assistente financeira inteligente.\n" +
-                    "Posso te ajudar com gastos, economias e orçamentos.\n" +
-                    "Digite *!help* para ver os comandos disponíveis.\n\n%s",
-                    nome, resposta
-                );
-            }
-
             enviar(chatId, resposta);
 
         } catch (Exception e) {
@@ -163,6 +158,9 @@ public class FinanceiroBot extends TelegramLongPollingBot {
             
             💱 *Cotações*
             Diga: "Quanto está o dólar?" ou "Preço do bitcoin"
+            
+            🚪 *Deslogar*
+            Diga: "/deslogar"
             
             💡 *Dica:* Fale naturalmente! A IA entende português.
             """;
