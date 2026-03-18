@@ -19,11 +19,11 @@ public class AiConfig {
     @Value("${bot.groq.api-key}")
     private String groqApiKey;
 
-    @Value("${bot.groq.model:llama-3.3-70b-versatile}")
-    private String groqModel;
-
-    // @Value("${bot.groq.model:llama-3.1-8b-instant}")
+    // @Value("${bot.groq.model:llama-3.3-70b-versatile}")
     // private String groqModel;
+
+    @Value("${bot.groq.model:llama-3.1-8b-instant}")
+    private String groqModel;
 
     @Value("${bot.groq.max-tokens:1024}")
     private int groqMaxTokens;

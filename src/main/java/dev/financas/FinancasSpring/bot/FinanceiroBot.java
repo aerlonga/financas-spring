@@ -1,6 +1,7 @@
 package dev.financas.FinancasSpring.bot;
 
 import dev.financas.FinancasSpring.services.AiAssistantService;
+import dev.financas.FinancasSpring.services.MessageQueueService;
 import dev.financas.FinancasSpring.model.entities.TelegramVinculo;
 import dev.financas.FinancasSpring.services.TelegramVinculoService;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +14,7 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.util.Map;
+import java.util.concurrent.ScheduledFuture;
 
 @Slf4j
 @Component
@@ -21,6 +23,7 @@ public class FinanceiroBot extends TelegramLongPollingBot {
     private final AiAssistantService aiService;
     private final TelegramVinculoService vinculoService;
     private final BotSessionManager sessionManager;
+    private final MessageQueueService messageQueueService;
     private final WebClient webClient;
 
     @Value("${bot.telegram.username}")
@@ -40,11 +43,13 @@ public class FinanceiroBot extends TelegramLongPollingBot {
             AiAssistantService aiService,
             TelegramVinculoService vinculoService,
             BotSessionManager sessionManager,
+            MessageQueueService messageQueueService,
             @Value("${bot.telegram.token}") String token) {
         super(token);
         this.aiService = aiService;
         this.vinculoService = vinculoService;
         this.sessionManager = sessionManager;
+        this.messageQueueService = messageQueueService;
         this.webClient = WebClient.builder().build();
     }
 
@@ -87,23 +92,31 @@ public class FinanceiroBot extends TelegramLongPollingBot {
             return;
         }
 
-        // Verifica se o usuário já está autenticado no sistema
-        TelegramVinculo vinculo = vinculoService.obterOuCriar(chatId, nome);
+        // Enfileira o processamento para não bloquear a thread de polling do Telegram
+        messageQueueService.submeter(chatId, () -> {
+            // Verifica se o usuário já está autenticado no sistema
+            TelegramVinculo vinculo = vinculoService.obterOuCriar(chatId, nome);
 
-        if (vinculo.getUsuario() == null) {
-            // Usuário NÃO autenticado -> processa o fluxo de autenticação via chat
-            processarFluxoAutenticacao(chatId, nome, texto);
-            return;
-        }
+            if (vinculo.getUsuario() == null) {
+                // Usuário NÃO autenticado -> processa o fluxo de autenticação via chat
+                processarFluxoAutenticacao(chatId, nome, texto);
+                return;
+            }
 
-        try {
-            String resposta = aiService.processar(chatId, nome, texto);
-            enviar(chatId, resposta);
+            // Inicia typing indicator ("digitando..." no Telegram)
+            ScheduledFuture<?> typingFuture = messageQueueService.iniciarTyping(chatId, this);
 
-        } catch (Exception e) {
-            log.error("[Bot] Erro ao processar mensagem de {}: {}", chatId, e.getMessage());
-            enviar(chatId, "Ops! Tive um probleminha. Pode tentar de novo?");
-        }
+            try {
+                String resposta = aiService.processar(chatId, nome, texto);
+                typingFuture.cancel(false);
+                enviar(chatId, resposta);
+
+            } catch (Exception e) {
+                typingFuture.cancel(false);
+                log.error("[Bot] Erro ao processar mensagem de {}: {}", chatId, e.getMessage());
+                enviar(chatId, "Ops! Tive um probleminha. Pode tentar de novo?");
+            }
+        });
     }
 
     private void enviar(String chatId, String texto) {

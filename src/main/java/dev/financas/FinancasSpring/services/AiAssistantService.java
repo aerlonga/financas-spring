@@ -47,7 +47,7 @@ public class AiAssistantService {
         ContentRetriever retriever = EmbeddingStoreContentRetriever.builder()
                 .embeddingStore(embeddingStore)
                 .embeddingModel(embeddingModel)
-                .maxResults(3)
+                .maxResults(2)
                 .minScore(0.6)
                 .build();
 
