@@ -40,7 +40,7 @@ public class FinanceiroTools {
         return vinculoService.obterOuCriar(chatId, "sistema");
     }
 
-    @Tool("Registra um gasto financeiro do usuário. Use quando o usuário informar local, valor e categoria de uma despesa.")
+    @Tool("Registra um gasto financeiro do usuário. USE APENAS se o usuário informou explicitamente o local, o valor e a categoria. JAMAIS invente esses dados se estiverem ausentes no contexto do usuário.")
     public String registrarGasto(
         @P("Nome do estabelecimento ou local onde foi feita a compra") String estabelecimento,
         @P("Valor numérico do gasto em reais (ex: 49.90)") double valor,
