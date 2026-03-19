@@ -28,11 +28,15 @@ public class FailoverChatModel implements ChatLanguageModel {
     @Override
     public Response<AiMessage> generate(List<ChatMessage> messages) {
         try {
-            return primary.generate(messages);
+            Response<AiMessage> response = primary.generate(messages);
+            log.debug("[AI-Failover] Resposta gerada pelo modelo PRIMÁRIO.");
+            return response;
         } catch (Exception e) {
-            log.warn("[AI-Failover] Modelo primário falhou. Alternando para o backup (Ollama) devido ao erro: {}", e.getMessage());
+            log.warn("[AI-Failover] Modelo PRIMÁRIO falhou. Alternando para o backup (Ollama) devido ao erro: {}", e.getMessage());
             try {
-                return backup.generate(messages);
+                Response<AiMessage> response = backup.generate(messages);
+                log.info("[AI-Failover] Resposta gerada pelo modelo de BACKUP (Ollama).");
+                return response;
             } catch (Exception eBackup) {
                 log.error("[AI-Failover] Ambos os modelos falharam. Erro backup: {}", eBackup.getMessage());
                 throw eBackup;
@@ -43,11 +47,15 @@ public class FailoverChatModel implements ChatLanguageModel {
     @Override
     public Response<AiMessage> generate(List<ChatMessage> messages, List<ToolSpecification> toolSpecifications) {
         try {
-            return primary.generate(messages, toolSpecifications);
+            Response<AiMessage> response = primary.generate(messages, toolSpecifications);
+            log.debug("[AI-Failover] Resposta (com tools) gerada pelo modelo PRIMÁRIO.");
+            return response;
         } catch (Exception e) {
-            log.warn("[AI-Failover] Modelo primário falhou (com tools). Alternando para o backup (Ollama) devido ao erro: {}", e.getMessage());
+            log.warn("[AI-Failover] Modelo PRIMÁRIO falhou (com tools). Alternando para o backup (Ollama) devido ao erro: {}", e.getMessage());
             try {
-                return backup.generate(messages, toolSpecifications);
+                Response<AiMessage> response = backup.generate(messages, toolSpecifications);
+                log.info("[AI-Failover] Resposta (com tools) gerada pelo modelo de BACKUP (Ollama).");
+                return response;
             } catch (Exception eBackup) {
                 log.error("[AI-Failover] Ambos os modelos falharam (com tools). Erro backup: {}", eBackup.getMessage());
                 throw eBackup;
@@ -58,13 +66,17 @@ public class FailoverChatModel implements ChatLanguageModel {
     @Override
     public Response<AiMessage> generate(List<ChatMessage> messages, ToolSpecification toolSpecification) {
         try {
-            return primary.generate(messages, toolSpecification);
+            Response<AiMessage> response = primary.generate(messages, toolSpecification);
+            log.debug("[AI-Failover] Resposta (com tool única) gerada pelo modelo PRIMÁRIO.");
+            return response;
         } catch (Exception e) {
-            log.warn("[AI-Failover] Modelo primário falhou (com tool). Alternando para o backup (Ollama) devido ao erro: {}", e.getMessage());
+            log.warn("[AI-Failover] Modelo PRIMÁRIO falhou (com tool única). Alternando para o backup (Ollama) devido ao erro: {}", e.getMessage());
             try {
-                return backup.generate(messages, toolSpecification);
+                Response<AiMessage> response = backup.generate(messages, toolSpecification);
+                log.info("[AI-Failover] Resposta (com tool única) gerada pelo modelo de BACKUP (Ollama).");
+                return response;
             } catch (Exception eBackup) {
-                log.error("[AI-Failover] Ambos os modelos falharam (com tool). Erro backup: {}", eBackup.getMessage());
+                log.error("[AI-Failover] Ambos os modelos falharam (com tool única). Erro backup: {}", eBackup.getMessage());
                 throw eBackup;
             }
         }
