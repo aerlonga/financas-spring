@@ -55,6 +55,8 @@ services:
       - SPRING_RABBITMQ_PORT=5672
       - SPRING_RABBITMQ_USERNAME=${RABBITMQ_USER:-financas}
       - SPRING_RABBITMQ_PASSWORD=${RABBITMQ_PASS:-financas123}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 
 volumes:
