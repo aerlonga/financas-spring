@@ -1,8 +1,6 @@
 package dev.financas.FinancasSpring.bot;
 
-import dev.financas.FinancasSpring.services.AiAssistantService;
 import dev.financas.FinancasSpring.services.MessageQueueService;
-import dev.financas.FinancasSpring.model.entities.TelegramVinculo;
 import dev.financas.FinancasSpring.services.TelegramVinculoService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,13 +12,11 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.util.Map;
-import java.util.concurrent.ScheduledFuture;
 
 @Slf4j
 @Component
 public class FinanceiroBot extends TelegramLongPollingBot {
 
-    private final AiAssistantService aiService;
     private final TelegramVinculoService vinculoService;
     private final BotSessionManager sessionManager;
     private final MessageQueueService messageQueueService;
@@ -32,21 +28,17 @@ public class FinanceiroBot extends TelegramLongPollingBot {
     @Value("${server.port:8080}")
     private int serverPort;
 
-
-
     @jakarta.annotation.PostConstruct
     public void init() {
         log.info("[Bot] FinanceiroBot inicializado. Username: {}, Token configurado: {}", username, getBotToken() != null ? "SIM" : "NAO");
     }
 
     public FinanceiroBot(
-            AiAssistantService aiService,
             TelegramVinculoService vinculoService,
             BotSessionManager sessionManager,
             MessageQueueService messageQueueService,
             @Value("${bot.telegram.token}") String token) {
         super(token);
-        this.aiService = aiService;
         this.vinculoService = vinculoService;
         this.sessionManager = sessionManager;
         this.messageQueueService = messageQueueService;
@@ -73,7 +65,7 @@ public class FinanceiroBot extends TelegramLongPollingBot {
 
         if ("!help".equalsIgnoreCase(texto.trim())) {
             log.info("[Bot] Sending help message to {}", chatId);
-            enviar(chatId, buildHelpMessage());
+            enviarResposta(chatId, buildHelpMessage());
             return;
         }
 
@@ -88,38 +80,24 @@ public class FinanceiroBot extends TelegramLongPollingBot {
         if ("/deslogar".equalsIgnoreCase(texto.trim()) || "!deslogar".equalsIgnoreCase(texto.trim())) {
             vinculoService.desvincular(chatId);
             sessionManager.limpar(chatId);
-            enviar(chatId, "✅ Conta deslogada com sucesso! Você pode realizar o login novamente enviando qualquer mensagem. 👋");
+            enviarResposta(chatId, "✅ Conta deslogada com sucesso! Você pode realizar o login novamente enviando qualquer mensagem. 👋");
             return;
         }
 
-        // Enfileira o processamento para não bloquear a thread de polling do Telegram
-        messageQueueService.submeter(chatId, () -> {
-            // Verifica se o usuário já está autenticado no sistema
-            TelegramVinculo vinculo = vinculoService.obterOuCriar(chatId, nome);
-
-            if (vinculo.getUsuario() == null) {
-                // Usuário NÃO autenticado -> processa o fluxo de autenticação via chat
-                processarFluxoAutenticacao(chatId, nome, texto);
-                return;
-            }
-
-            // Inicia typing indicator ("digitando..." no Telegram)
-            ScheduledFuture<?> typingFuture = messageQueueService.iniciarTyping(chatId, this);
-
-            try {
-                String resposta = aiService.processar(chatId, nome, texto);
-                typingFuture.cancel(false);
-                enviar(chatId, resposta);
-
-            } catch (Exception e) {
-                typingFuture.cancel(false);
-                log.error("[Bot] Erro ao processar mensagem de {}: {}", chatId, e.getMessage());
-                enviar(chatId, "Ops! Tive um probleminha. Pode tentar de novo?");
-            }
-        });
+        // Enfileira no RabbitMQ para processamento assíncrono
+        try {
+            messageQueueService.submeter(chatId, nome, texto);
+        } catch (Exception e) {
+            log.error("[Bot] Falha ao enfileirar mensagem de chatId={}: {}", chatId, e.getMessage());
+            enviarResposta(chatId, "Desculpe, estou com dificuldade para processar sua mensagem agora. Tente novamente em alguns segundos.");
+        }
     }
 
-    private void enviar(String chatId, String texto) {
+    /**
+     * Envia uma resposta ao chat do Telegram. Divide mensagens grandes em chunks.
+     * Método público para ser chamado pelo TelegramMessageConsumer.
+     */
+    public void enviarResposta(String chatId, String texto) {
         int limite = 4000;
         if (texto.length() <= limite) {
             enviarSimples(chatId, texto);
@@ -181,7 +159,7 @@ public class FinanceiroBot extends TelegramLongPollingBot {
 
     private void handleVincular(String chatId, String codigo) {
         if (codigo.isBlank()) {
-            enviar(chatId, "⚠️ Use o comando assim: `/vincular SEU_CODIGO`\nO código é gerado na área de configurações do sistema web.");
+            enviarResposta(chatId, "⚠️ Use o comando assim: `/vincular SEU_CODIGO`\nO código é gerado na área de configurações do sistema web.");
             return;
         }
 
@@ -193,33 +171,37 @@ public class FinanceiroBot extends TelegramLongPollingBot {
                     .bodyToMono(String.class)
                     .block();
 
-            enviar(chatId, "✅ " + resultado);
+            enviarResposta(chatId, "✅ " + resultado);
         } catch (Exception e) {
             log.error("[Bot] Falha ao vincular chatId={} codigo={}: {}", chatId, codigo, e.getMessage());
-            enviar(chatId, "❌ Código inválido ou expirado. Gere um novo código em: *Configurações → Vincular Telegram*");
+            enviarResposta(chatId, "❌ Código inválido ou expirado. Gere um novo código em: *Configurações → Vincular Telegram*");
         }
     }
 
-    private void processarFluxoAutenticacao(String chatId, String nome, String texto) {
+    /**
+     * Processa o fluxo de autenticação (login ou cadastro) via chat.
+     * Chamado pelo TelegramMessageConsumer quando o usuário não está autenticado.
+     */
+    public void processarFluxoAutenticacao(String chatId, String nome, String texto) {
         BotSessionState estado = sessionManager.getEstado(chatId);
 
         try {
             switch (estado) {
                 case NONE -> {
-                    enviar(chatId, "Olá, *" + nome + "*! 👋\nPara usar o bot, preciso identificar você.\nVocê já tem uma conta no nosso sistema?\n\nResponda *SIM* ou *NÃO*.");
+                    enviarResposta(chatId, "Olá, *" + nome + "*! 👋\nPara usar o bot, preciso identificar você.\nVocê já tem uma conta no nosso sistema?\n\nResponda *SIM* ou *NÃO*.");
                     sessionManager.setEstado(chatId, BotSessionState.AGUARDANDO_CHOICE);
                 }
 
                 case AGUARDANDO_CHOICE -> {
                     String resposta = texto.trim().toUpperCase();
                     if (resposta.equals("SIM") || resposta.equals("S")) {
-                        enviar(chatId, "📧 Ótimo! Qual é o seu *e-mail* cadastrado?");
+                        enviarResposta(chatId, "📧 Ótimo! Qual é o seu *e-mail* cadastrado?");
                         sessionManager.setEstado(chatId, BotSessionState.AGUARDANDO_EMAIL_LOGIN);
                     } else if (resposta.equals("NÃO") || resposta.equals("NAO") || resposta.equals("N")) {
-                        enviar(chatId, "📝 Vamos criar sua conta então!\nQual é o seu *nome completo*?");
+                        enviarResposta(chatId, "📝 Vamos criar sua conta então!\nQual é o seu *nome completo*?");
                         sessionManager.setEstado(chatId, BotSessionState.AGUARDANDO_NOME_CADASTRO);
                     } else {
-                        enviar(chatId, "🤔 Por favor, responda apenas *SIM* ou *NÃO*.");
+                        enviarResposta(chatId, "🤔 Por favor, responda apenas *SIM* ou *NÃO*.");
                     }
                 }
 
@@ -227,7 +209,7 @@ public class FinanceiroBot extends TelegramLongPollingBot {
 
                 case AGUARDANDO_EMAIL_LOGIN -> {
                     sessionManager.setDado(chatId, "email", texto.trim());
-                    enviar(chatId, "🔑 Agora, digite sua *senha*:\n_(Dica: Pode apagar a mensagem após enviar por segurança)_");
+                    enviarResposta(chatId, "🔑 Agora, digite sua *senha*:\n_(Dica: Pode apagar a mensagem após enviar por segurança)_");
                     sessionManager.setEstado(chatId, BotSessionState.AGUARDANDO_SENHA_LOGIN);
                 }
 
@@ -237,10 +219,10 @@ public class FinanceiroBot extends TelegramLongPollingBot {
 
                     try {
                         vinculoService.autenticarEVincular(chatId, email, senha);
-                        enviar(chatId, "✅ *Login realizado com sucesso!*\n\nSua conta do Telegram está vinculada ao sistema. Agora você pode registrar gastos e pedir resumos financeiros normalmente! 🚀");
+                        enviarResposta(chatId, "✅ *Login realizado com sucesso!*\n\nSua conta do Telegram está vinculada ao sistema. Agora você pode registrar gastos e pedir resumos financeiros normalmente! 🚀");
                         sessionManager.limpar(chatId);
                     } catch (Exception e) {
-                        enviar(chatId, "❌ E-mail ou senha incorretos.\nVamos tentar de novo. Qual é o seu *e-mail*?");
+                        enviarResposta(chatId, "❌ E-mail ou senha incorretos.\nVamos tentar de novo. Qual é o seu *e-mail*?");
                         sessionManager.setEstado(chatId, BotSessionState.AGUARDANDO_EMAIL_LOGIN);
                     }
                 }
@@ -249,28 +231,28 @@ public class FinanceiroBot extends TelegramLongPollingBot {
 
                 case AGUARDANDO_NOME_CADASTRO -> {
                     if (texto.trim().length() < 3) {
-                        enviar(chatId, "⚠️ O nome deve ter pelo menos 3 caracteres. Tente novamente:");
+                        enviarResposta(chatId, "⚠️ O nome deve ter pelo menos 3 caracteres. Tente novamente:");
                         return;
                     }
                     sessionManager.setDado(chatId, "nome", texto.trim());
-                    enviar(chatId, "📧 Perfeito. Qual será o seu *e-mail* de acesso?");
+                    enviarResposta(chatId, "📧 Perfeito. Qual será o seu *e-mail* de acesso?");
                     sessionManager.setEstado(chatId, BotSessionState.AGUARDANDO_EMAIL_CADASTRO);
                 }
 
                 case AGUARDANDO_EMAIL_CADASTRO -> {
                     if (!texto.contains("@") || !texto.contains(".")) {
-                        enviar(chatId, "⚠️ Formato de e-mail parece inválido. Tente novamente:");
+                        enviarResposta(chatId, "⚠️ Formato de e-mail parece inválido. Tente novamente:");
                         return;
                     }
                     sessionManager.setDado(chatId, "email", texto.trim());
-                    enviar(chatId, "🔑 Crie uma *senha* segura (mínimo de 6 caracteres):");
+                    enviarResposta(chatId, "🔑 Crie uma *senha* segura (mínimo de 6 caracteres):");
                     sessionManager.setEstado(chatId, BotSessionState.AGUARDANDO_SENHA_CADASTRO);
                 }
 
                 case AGUARDANDO_SENHA_CADASTRO -> {
                     String senha = texto.trim();
                     if (senha.length() < 6) {
-                        enviar(chatId, "⚠️ A senha deve ter no mínimo 6 caracteres. Tente novamente:");
+                        enviarResposta(chatId, "⚠️ A senha deve ter no mínimo 6 caracteres. Tente novamente:");
                         return;
                     }
 
@@ -279,16 +261,16 @@ public class FinanceiroBot extends TelegramLongPollingBot {
 
                     try {
                         vinculoService.cadastrarEVincular(chatId, nome, nomeCadastro, emailCadastro, senha);
-                        enviar(chatId, "✅ *Conta criada e vinculada com sucesso!*\n\nBem-vindo ao sistema financeiro, " + nome + "! Você já pode começar a gerenciar suas contas comigo. 🚀");
+                        enviarResposta(chatId, "✅ *Conta criada e vinculada com sucesso!*\n\nBem-vindo ao sistema financeiro, " + nome + "! Você já pode começar a gerenciar suas contas comigo. 🚀");
                         sessionManager.limpar(chatId);
                     } catch (Exception e) {
                         log.error("[Bot] Erro ao cadastrar usuario chatId={}: {}", chatId, e.getMessage());
                         
                         if (e.getMessage() != null && e.getMessage().contains("já está em uso")) {
-                            enviar(chatId, "❌ Esse e-mail já está em uso.\nSe esta é sua conta, responda *SIM* para fazer login, ou digite um e-mail diferente:");
+                            enviarResposta(chatId, "❌ Esse e-mail já está em uso.\nSe esta é sua conta, responda *SIM* para fazer login, ou digite um e-mail diferente:");
                             sessionManager.setEstado(chatId, BotSessionState.AGUARDANDO_CHOICE);
                         } else {
-                            enviar(chatId, "❌ Ocorreu um erro ao criar a conta: " + e.getMessage() + "\nVamos recomeçar. Qual é o seu e-mail?");
+                            enviarResposta(chatId, "❌ Ocorreu um erro ao criar a conta: " + e.getMessage() + "\nVamos recomeçar. Qual é o seu e-mail?");
                             sessionManager.setEstado(chatId, BotSessionState.AGUARDANDO_EMAIL_CADASTRO);
                         }
                     }
@@ -296,7 +278,7 @@ public class FinanceiroBot extends TelegramLongPollingBot {
             }
         } catch (Exception e) {
             log.error("[Bot] Fluxo auth bateu panic! chatId={}", chatId, e);
-            enviar(chatId, "Desculpe, deu um erro técnico aqui. Vamos tentar de novo? Responda *SIM* se já tem conta ou *NÃO* para criar.");
+            enviarResposta(chatId, "Desculpe, deu um erro técnico aqui. Vamos tentar de novo? Responda *SIM* se já tem conta ou *NÃO* para criar.");
             sessionManager.setEstado(chatId, BotSessionState.AGUARDANDO_CHOICE);
         }
     }

@@ -12,6 +12,19 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq_financas
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-financas}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-financas123}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmqdata:/var/lib/rabbitmq
+
   app:
     build:
       context: .
@@ -24,6 +37,7 @@ services:
       - "8080:8080"
     depends_on:
       - postgres
+      - rabbitmq
     volumes:
       - ./logs:/app/logs
     env_file: .env
@@ -37,7 +51,12 @@ services:
       - SPRING_FLYWAY_ENABLED=true
       - DB_HOST=postgres
       - DB_PORT=5432
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=${RABBITMQ_USER:-financas}
+      - SPRING_RABBITMQ_PASSWORD=${RABBITMQ_PASS:-financas123}
 
 
 volumes:
   pgdata:
+  rabbitmqdata:

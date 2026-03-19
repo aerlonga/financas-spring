@@ -1,78 +1,53 @@
 package dev.financas.FinancasSpring.services;
 
+import dev.financas.FinancasSpring.configuration.RabbitMQConfig;
+import dev.financas.FinancasSpring.model.dto.TelegramMessageDTO;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.ActionType;
 import org.telegram.telegrambots.meta.api.methods.send.SendChatAction;
 import org.telegram.telegrambots.meta.bots.AbsSender;
 
-import jakarta.annotation.PreDestroy;
-import java.util.Queue;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
- * Serviço de fila de mensagens por chatId.
+ * Serviço de fila de mensagens usando RabbitMQ.
  * <p>
- * Garante:
- * - Mensagens do MESMO chat são processadas em ORDEM (FIFO)
- * - Mensagens de chats DIFERENTES rodam em paralelo
- * - Typing indicator ("digitando...") é mostrado enquanto processa
+ * Responsabilidades:
+ * - Publicar mensagens na fila do RabbitMQ
+ * - Gerenciar o typing indicator ("digitando...") no Telegram
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class MessageQueueService {
 
-    /** Thread pool para processar mensagens em paralelo entre chats. */
-    private final ExecutorService executor = Executors.newFixedThreadPool(5);
+    private final RabbitTemplate rabbitTemplate;
 
     /** Scheduler dedicado para enviar o typing indicator periodicamente. */
     private final ScheduledExecutorService typingScheduler = Executors.newScheduledThreadPool(2);
 
-    /** Fila de tarefas pendentes por chatId. */
-    private final ConcurrentHashMap<String, Queue<Runnable>> filas = new ConcurrentHashMap<>();
-
-    /** Flag de "processando" por chatId — garante que apenas 1 tarefa do mesmo chat roda por vez. */
-    private final ConcurrentHashMap<String, AtomicBoolean> processando = new ConcurrentHashMap<>();
-
     /**
-     * Enfileira uma tarefa para processamento.
-     * Se o chat já está sendo processado, a tarefa fica na fila.
-     * Se não, executa imediatamente no thread pool.
+     * Publica uma mensagem na fila do RabbitMQ para processamento assíncrono.
      */
-    public void submeter(String chatId, Runnable tarefa) {
-        filas.computeIfAbsent(chatId, k -> new ConcurrentLinkedQueue<>()).add(tarefa);
-        processando.computeIfAbsent(chatId, k -> new AtomicBoolean(false));
+    public void submeter(String chatId, String nome, String texto) {
+        TelegramMessageDTO mensagem = new TelegramMessageDTO(chatId, nome, texto);
 
-        tentarProcessar(chatId);
-    }
-
-    private void tentarProcessar(String chatId) {
-        AtomicBoolean flag = processando.get(chatId);
-        Queue<Runnable> fila = filas.get(chatId);
-
-        if (flag == null || fila == null) return;
-
-        // compareAndSet garante que só uma thread por chat entra aqui
-        if (flag.compareAndSet(false, true)) {
-            Runnable proxima = fila.poll();
-            if (proxima != null) {
-                executor.submit(() -> {
-                    try {
-                        proxima.run();
-                    } catch (Exception e) {
-                        log.error("[Queue] Erro ao processar tarefa para chatId={}: {}", chatId, e.getMessage(), e);
-                    } finally {
-                        flag.set(false);
-                        // Verifica se há mais mensagens na fila
-                        if (!fila.isEmpty()) {
-                            tentarProcessar(chatId);
-                        }
-                    }
-                });
-            } else {
-                flag.set(false);
-            }
+        try {
+            rabbitTemplate.convertAndSend(
+                    RabbitMQConfig.EXCHANGE,
+                    RabbitMQConfig.ROUTING_KEY,
+                    mensagem
+            );
+            log.info("[Queue] Mensagem enfileirada no RabbitMQ para chatId={}", chatId);
+        } catch (Exception e) {
+            log.error("[Queue] Falha ao enfileirar mensagem para chatId={}: {}", chatId, e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -104,25 +79,5 @@ public class MessageQueueService {
         } catch (Exception e) {
             log.warn("[Typing] Falha ao enviar typing para chatId={}: {}", chatId, e.getMessage());
         }
-    }
-
-    @PreDestroy
-    public void shutdown() {
-        log.info("[Queue] Desligando thread pools...");
-        executor.shutdown();
-        typingScheduler.shutdown();
-        try {
-            if (!executor.awaitTermination(10, TimeUnit.SECONDS)) {
-                executor.shutdownNow();
-            }
-            if (!typingScheduler.awaitTermination(5, TimeUnit.SECONDS)) {
-                typingScheduler.shutdownNow();
-            }
-        } catch (InterruptedException e) {
-            executor.shutdownNow();
-            typingScheduler.shutdownNow();
-            Thread.currentThread().interrupt();
-        }
-        log.info("[Queue] Thread pools desligados.");
     }
 }
