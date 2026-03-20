@@ -13,6 +13,9 @@ import dev.langchain4j.data.document.Metadata;
 import dev.financas.FinancasSpring.bot.tools.FinanceiroTools;
 import dev.financas.FinancasSpring.bot.tools.PesquisaWebTools;
 import lombok.extern.slf4j.Slf4j;
+import dev.langchain4j.store.embedding.filter.Filter;
+import dev.langchain4j.store.embedding.filter.MetadataFilterBuilder;
+import java.util.Collections;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -44,12 +47,21 @@ public class AiAssistantService {
         this.embeddingModel = embeddingModel;
         this.embeddingStore = embeddingStore;
 
-        ContentRetriever retriever = EmbeddingStoreContentRetriever.builder()
-                .embeddingStore(embeddingStore)
-                .embeddingModel(embeddingModel)
-                .maxResults(2)
-                .minScore(0.6)
-                .build();
+        ContentRetriever retriever = query -> {
+            String chatId = FinanceiroTools.getChatId();
+            if (chatId == null) return Collections.emptyList();
+
+            Filter filter = MetadataFilterBuilder.metadataKey("chatId").isEqualTo(chatId);
+
+            return EmbeddingStoreContentRetriever.builder()
+                    .embeddingStore(embeddingStore)
+                    .embeddingModel(embeddingModel)
+                    .filter(filter)
+                    .maxResults(2)
+                    .minScore(0.6)
+                    .build()
+                    .retrieve(query);
+        };
 
         this.assistente = AiServices.builder(AssistentFinanceiro.class)
                 .chatLanguageModel(chatLanguageModel)

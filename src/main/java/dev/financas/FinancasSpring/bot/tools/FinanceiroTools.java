@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import org.springframework.lang.Nullable;
 
 
 @Component
@@ -28,6 +29,10 @@ public class FinanceiroTools {
 
     public static void setChatId(String chatId) {
         CHAT_ID_CONTEXT.set(chatId);
+    }
+
+    public static String getChatId() {
+        return CHAT_ID_CONTEXT.get();
     }
 
     public static void clearChatId() {
@@ -70,7 +75,7 @@ public class FinanceiroTools {
     @Tool("Consulta o resumo de gastos do usuário em um período. Use quando perguntar quanto gastou hoje, essa semana, esse mês ou em uma categoria específica.")
     public String consultarGastos(
         @P("Período: HOJE, ONTEM, SEMANA, MES ou TOTAL") String periodo,
-        @P("Categoria específica (opcional). Ex: ALIMENTACAO") String categoria
+        @P("Categoria específica (opcional). Ex: ALIMENTACAO") @Nullable String categoria
     ) {
         TelegramVinculo vinculo = getVinculo();
         LocalDate[] datas = resolverPeriodo(periodo);
@@ -103,7 +108,7 @@ public class FinanceiroTools {
 
     @Tool("Consulta o orçamento mensal e saldo disponível do usuário. Pode ser geral ou por categoria específica.")
     public String consultarOrcamento(
-        @P("Nome da categoria (ex: ALIMENTACAO). Deixar vazio para visão geral.") String categoria
+        @P("Nome da categoria (ex: ALIMENTACAO). Use null ou vazio para visão geral.") @Nullable String categoria
     ) {
         TelegramVinculo vinculo = getVinculo();
         CategoriaGasto cat = (categoria != null && !categoria.isBlank())
