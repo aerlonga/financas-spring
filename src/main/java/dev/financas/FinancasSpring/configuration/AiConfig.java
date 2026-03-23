@@ -2,6 +2,7 @@ package dev.financas.FinancasSpring.configuration;
 
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.googleai.GoogleAiEmbeddingModel;
+import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel;
 import dev.langchain4j.model.ollama.OllamaChatModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.store.embedding.EmbeddingStore;
@@ -19,19 +20,19 @@ import java.time.Duration;
 public class AiConfig {
 
     // ---- Groq (chat) ----
-    @Value("${bot.groq.api-key}")
-    private String groqApiKey;
+    // @Value("${bot.groq.api-key}")
+    // private String groqApiKey;
 
-    @Value("${bot.groq.model:llama-3.1-8b-instant}")
-    private String groqModel;
+    // @Value("${bot.groq.model:llama-3.1-8b-instant}")
+    // private String groqModel;
     // @Value("${bot.groq.model:llama-3.3-70b-versatile}")
     // private String groqModel;
 
-    @Value("${bot.groq.max-tokens:1024}")
-    private int groqMaxTokens;
+    // @Value("${bot.groq.max-tokens:1024}")
+    // private int groqMaxTokens;
 
-    @Value("${bot.groq.temperature:0.3}")
-    private double groqTemperature;
+    // @Value("${bot.groq.temperature:0.3}")
+    // private double groqTemperature;
 
     // ---- Ollama (backup local) ----
     @Value("${bot.ollama.base-url:http://localhost:11434}")
@@ -40,19 +41,38 @@ public class AiConfig {
     @Value("${bot.ollama.model:llama3.1:8b}")
     private String ollamaModel;
 
-    // ---- Gemini (embedding) ----
+    // ---- Gemini (Google AI) ----
     @Value("${bot.gemini.api-key}")
     private String geminiApiKey;
 
+    @Value("${bot.gemini.model:gemini-2.5-flash}")
+    private String geminiModel;
+
+    @Value("${bot.gemini.max-tokens:1024}")
+    private int geminiMaxTokens;
+
+    @Value("${bot.gemini.temperature:0.3}")
+    private double geminiTemperature;
+
+//    @Bean
+//    public OpenAiChatModel groqChatModel() {
+//        return OpenAiChatModel.builder()
+//                .baseUrl("https://api.groq.com/openai/v1")
+//                .apiKey(groqApiKey)
+//                .modelName(groqModel)
+//                 .maxTokens(groqMaxTokens)
+//                .temperature(groqTemperature)
+//                .timeout(Duration.ofSeconds(60))
+//                .build();
+//    }
+
     @Bean
-    public OpenAiChatModel groqChatModel() {
-        return OpenAiChatModel.builder()
-                .baseUrl("https://api.groq.com/openai/v1")
-                .apiKey(groqApiKey)
-                .modelName(groqModel)
-                .maxTokens(groqMaxTokens)
-                .temperature(groqTemperature)
-                .timeout(Duration.ofSeconds(60))
+    public GoogleAiGeminiChatModel geminiChatModel() {
+        return GoogleAiGeminiChatModel.builder()
+                .apiKey(geminiApiKey)
+                .modelName(geminiModel)
+                .maxOutputTokens(geminiMaxTokens)
+                .temperature(geminiTemperature)
                 .build();
     }
 
@@ -61,7 +81,8 @@ public class AiConfig {
         return OllamaChatModel.builder()
                 .baseUrl(ollamaBaseUrl)
                 .modelName(ollamaModel)
-                .temperature(groqTemperature)
+                // .temperature(groqTemperature)
+                .temperature(geminiTemperature)
                 .timeout(Duration.ofSeconds(60))
                 .build();
     }
@@ -73,9 +94,9 @@ public class AiConfig {
     @Primary
     @Bean
     public ChatLanguageModel chatLanguageModel(
-            OpenAiChatModel groqChatModel,
+            GoogleAiGeminiChatModel geminiChatModel,
             OllamaChatModel ollamaChatModel) {
-        return new FailoverChatModel(groqChatModel, ollamaChatModel);
+        return new FailoverChatModel(geminiChatModel, ollamaChatModel);
     }
 
     @Bean

@@ -57,11 +57,12 @@ public class GastoService {
         sb.append("Últimos lançamentos:\n");
 
         gastos.stream().limit(5).forEach(g ->
-            sb.append(String.format("• %s: %s - R$ %.2f (%s)\n",
+            sb.append(String.format("• %s: %s - R$ %.2f (%s) [ID: %d]\n",
                 g.getDataGasto().format(FMT),
                 g.getEstabelecimento(),
                 g.getValor(),
-                g.getCategoria().name()))
+                g.getCategoria().name(),
+                g.getId()))
         );
 
         if (gastos.size() > 5) {
@@ -70,4 +71,59 @@ public class GastoService {
 
         return sb.toString();
     }
+
+    @Transactional
+    public String apagarUltimoGasto(TelegramVinculo vinculo) {
+        return repository.findFirstByTelegramVinculoOrderByCriadoEmDesc(vinculo)
+            .map(gasto -> {
+                repository.delete(gasto);
+                return String.format("🗑️ Gasto apagado com sucesso!\n• Local: %s\n• Valor: R$ %.2f\n• Categoria: %s",
+                    gasto.getEstabelecimento(), gasto.getValor(), gasto.getCategoria().name());
+            })
+            .orElse("Nenhum gasto encontrado para apagar.");
+    }
+
+    @Transactional
+    public String apagarGastoPorId(TelegramVinculo vinculo, Long id) {
+        return repository.findById(id)
+            .map(gasto -> {
+                if (!gasto.getTelegramVinculo().getId().equals(vinculo.getId())) {
+                    return "🚫 Operação não autorizada. O gasto não pertence a você.";
+                }
+                repository.delete(gasto);
+                return String.format("🗑️ Gasto apagado com sucesso!\n• Local: %s\n• Valor: R$ %.2f\n• Categoria: %s",
+                    gasto.getEstabelecimento(), gasto.getValor(), gasto.getCategoria().name());
+            })
+            .orElse("Nenhum gasto encontrado com o ID informado.");
+    }
+
+    @Transactional
+    public String editarGasto(TelegramVinculo vinculo, Long id,
+                              String novoEstabelecimento, Double novoValor,
+                              CategoriaGasto novaCategoria, LocalDate novaData) {
+        return repository.findById(id)
+            .map(gasto -> {
+                if (!gasto.getTelegramVinculo().getId().equals(vinculo.getId())) {
+                    return "🚫 Operação não autorizada. O gasto não pertence a você.";
+                }
+                if (novoEstabelecimento != null && !novoEstabelecimento.isBlank()) {
+                    gasto.setEstabelecimento(novoEstabelecimento);
+                }
+                if (novoValor != null) {
+                    gasto.setValor(BigDecimal.valueOf(novoValor));
+                }
+                if (novaCategoria != null) {
+                    gasto.setCategoria(novaCategoria);
+                }
+                if (novaData != null) {
+                    gasto.setDataGasto(novaData);
+                }
+                repository.save(gasto);
+                return String.format("✅ Gasto atualizado com sucesso!\n• Local: %s\n• Valor: R$ %.2f\n• Categoria: %s\n• Data: %s",
+                    gasto.getEstabelecimento(), gasto.getValor(), gasto.getCategoria().name(),
+                    gasto.getDataGasto().format(FMT));
+            })
+            .orElse("Nenhum gasto encontrado com o ID informado.");
+    }
 }
+

@@ -50,7 +50,7 @@ public class FinanceiroTools {
         @P("Nome do estabelecimento ou local onde foi feita a compra") String estabelecimento,
         @P("Valor numérico do gasto em reais (ex: 49.90)") double valor,
         @P("Categoria: ALIMENTACAO, TRANSPORTE, SAUDE, MORADIA, LAZER, EDUCACAO ou OUTROS") String categoria,
-        @P("Data do gasto no formato dd/MM/yyyy. Se não informado, usar data de hoje.") String data
+        @P(value = "Data do gasto no formato dd/MM/yyyy. Se não informado, use data de hoje ou String vazia (NÃO use null).", required = false) String data
     ) {
         try {
             TelegramVinculo vinculo = getVinculo();
@@ -72,10 +72,10 @@ public class FinanceiroTools {
         }
     }
 
-    @Tool("Consulta o resumo de gastos do usuário em um período. Use quando perguntar quanto gastou hoje, essa semana, esse mês ou em uma categoria específica.")
+    @Tool("Consulta o resumo de gastos do usuário em um período. Use quando perguntar quanto gastou hoje, essa semana, esse mês ou em uma categoria específica. Os resultados incluem o ID de cada gasto, que pode ser usado para apagar ou editar um registro específico.")
     public String consultarGastos(
         @P("Período: HOJE, ONTEM, SEMANA, MES ou TOTAL") String periodo,
-        @P("Categoria específica (opcional). Ex: ALIMENTACAO") @Nullable String categoria
+        @P(value = "Categoria específica (opcional). Ex: ALIMENTACAO. Use String vazia (\"\") ou omita para todos os gastos. NÃO use null.", required = false) @Nullable String categoria
     ) {
         TelegramVinculo vinculo = getVinculo();
         LocalDate[] datas = resolverPeriodo(periodo);
@@ -108,7 +108,7 @@ public class FinanceiroTools {
 
     @Tool("Consulta o orçamento mensal e saldo disponível do usuário. Pode ser geral ou por categoria específica.")
     public String consultarOrcamento(
-        @P("Nome da categoria (ex: ALIMENTACAO). Use null ou vazio para visão geral.") @Nullable String categoria
+        @P(value = "Nome da categoria (ex: ALIMENTACAO). Use String vazia (\"\") ou omita para visão geral. NÃO use null.", required = false) @Nullable String categoria
     ) {
         TelegramVinculo vinculo = getVinculo();
         CategoriaGasto cat = (categoria != null && !categoria.isBlank())
@@ -124,6 +124,36 @@ public class FinanceiroTools {
         TelegramVinculo vinculo = getVinculo();
         CategoriaGasto cat = CategoriaGasto.valueOf(categoria.toUpperCase());
         return orcamentoService.definirOrcamento(vinculo, cat, BigDecimal.valueOf(limite));
+    }
+
+    @Tool("Apaga o último gasto registrado pelo usuário. Útil quando o usuário diz que errou o valor/local e quer desfazer ou apagar o último registro.")
+    public String apagarUltimoGasto() {
+        TelegramVinculo vinculo = getVinculo();
+        return gastoService.apagarUltimoGasto(vinculo);
+    }
+
+    @Tool("Apaga um gasto específico pelo seu ID. Use quando o usuário indicar qual registro deseja apagar após listar os gastos.")
+    public String apagarGastoPorId(
+        @P("ID do gasto que foi mostrado na listagem (ex: 45)") long id
+    ) {
+        TelegramVinculo vinculo = getVinculo();
+        return gastoService.apagarGastoPorId(vinculo, id);
+    }
+
+    @Tool("Edita/altera um gasto existente pelo seu ID. Use quando o usuário quiser modificar o valor, local, categoria ou data de um registro já cadastrado. Informe apenas os campos que o usuário deseja alterar; deixe os demais como String vazia ou null.")
+    public String editarGasto(
+        @P("ID do gasto a ser editado (ex: 45)") long id,
+        @P(value = "Novo nome do estabelecimento. Use String vazia (\"\") para não alterar.", required = false) @Nullable String novoEstabelecimento,
+        @P(value = "Novo valor em reais. Use 0 para não alterar.", required = false) double novoValor,
+        @P(value = "Nova categoria: ALIMENTACAO, TRANSPORTE, SAUDE, MORADIA, LAZER, EDUCACAO ou OUTROS. Use String vazia (\"\") para não alterar.", required = false) @Nullable String novaCategoria,
+        @P(value = "Nova data no formato dd/MM/yyyy. Use String vazia (\"\") para não alterar.", required = false) @Nullable String novaData
+    ) {
+        TelegramVinculo vinculo = getVinculo();
+        String estabelecimento = (novoEstabelecimento != null && !novoEstabelecimento.isBlank()) ? novoEstabelecimento : null;
+        Double valor = (novoValor > 0) ? novoValor : null;
+        CategoriaGasto cat = (novaCategoria != null && !novaCategoria.isBlank()) ? parseCategoriaSegura(novaCategoria) : null;
+        LocalDate data = (novaData != null && !novaData.isBlank()) ? parseData(novaData) : null;
+        return gastoService.editarGasto(vinculo, id, estabelecimento, valor, cat, data);
     }
 
     private LocalDate parseData(String data) {

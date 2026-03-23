@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface GastoRepository extends JpaRepository<Gasto, Long> {
 
@@ -35,4 +36,7 @@ public interface GastoRepository extends JpaRepository<Gasto, Long> {
 
     // Top 5 mais recentes para exibição no resumo
     List<Gasto> findTop5ByTelegramVinculoOrderByCriadoEmDesc(TelegramVinculo vinculo);
+
+    // Busca o gasto mais recente para exclusão
+    Optional<Gasto> findFirstByTelegramVinculoOrderByCriadoEmDesc(TelegramVinculo vinculo);
 }
