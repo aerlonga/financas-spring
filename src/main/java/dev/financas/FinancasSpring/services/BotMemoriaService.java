@@ -28,10 +28,6 @@ public class BotMemoriaService {
     @Value("${bot.memory.max-messages:20}")
     private int maxMessages;
 
-    /**
-     * Constrói um ChatMemory com persistência no banco para um chatId específico.
-     * O LangChain4j usa este objeto para manter contexto entre mensagens.
-     */
     public ChatMemory buildMemoryForChat(String chatId) {
         return new SafeChatMemory(chatId, new PostgresChatMemoryStore(chatId, repository), maxMessages);
     }

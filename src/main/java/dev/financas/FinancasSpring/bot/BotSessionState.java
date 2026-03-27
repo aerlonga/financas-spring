@@ -28,5 +28,10 @@ public enum BotSessionState {
     AGUARDANDO_EMAIL_CADASTRO,
 
     /** Cadastro: e-mail recebido, aguardando a senha. */
-    AGUARDANDO_SENHA_CADASTRO
+    AGUARDANDO_SENHA_CADASTRO,
+
+    // ── Fluxo de Confirmação de Comprovante ──────────────────────────────
+
+    /** Bot leu um comprovante e exibiu os dados ao usuário — aguardando SIM ou NÃO para registrar. */
+    AGUARDANDO_CONFIRMACAO_COMPROVANTE
 }

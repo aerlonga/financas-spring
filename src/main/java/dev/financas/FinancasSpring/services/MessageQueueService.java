@@ -52,6 +52,33 @@ public class MessageQueueService {
     }
 
     /**
+     * Publica uma mensagem de mídia (áudio ou imagem) na fila do RabbitMQ.
+     *
+     * @param chatId     ID do chat Telegram
+     * @param nome       nome do usuário
+     * @param tipo       tipo de mídia (AUDIO ou IMAGEM)
+     * @param mediaBase64 conteúdo do arquivo codificado em Base64
+     * @param mimeType   MIME type do arquivo
+     */
+    public void submeterMidia(String chatId, String nome,
+                               TelegramMessageDTO.TipoMensagem tipo,
+                               String mediaBase64, String mimeType) {
+        TelegramMessageDTO mensagem = new TelegramMessageDTO(chatId, nome, tipo, mediaBase64, mimeType);
+
+        try {
+            rabbitTemplate.convertAndSend(
+                    RabbitMQConfig.EXCHANGE,
+                    RabbitMQConfig.ROUTING_KEY,
+                    mensagem
+            );
+            log.info("[Queue] Mídia ({}) enfileirada no RabbitMQ para chatId={}", tipo, chatId);
+        } catch (Exception e) {
+            log.error("[Queue] Falha ao enfileirar mídia para chatId={}: {}", chatId, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    /**
      * Inicia o loop de typing indicator.
      * Envia "typing..." a cada 4 segundos até que o retorno (ScheduledFuture) seja cancelado.
      *

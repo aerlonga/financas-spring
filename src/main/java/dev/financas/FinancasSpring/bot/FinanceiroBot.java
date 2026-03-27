@@ -1,6 +1,8 @@
 package dev.financas.FinancasSpring.bot;
 
+import dev.financas.FinancasSpring.model.dto.TelegramMessageDTO;
 import dev.financas.FinancasSpring.services.MessageQueueService;
+import dev.financas.FinancasSpring.services.TelegramMediaService;
 import dev.financas.FinancasSpring.services.TelegramVinculoService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -8,9 +10,14 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.Message;
+import org.telegram.telegrambots.meta.api.objects.PhotoSize;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.util.Base64;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -20,6 +27,7 @@ public class FinanceiroBot extends TelegramLongPollingBot {
     private final TelegramVinculoService vinculoService;
     private final BotSessionManager sessionManager;
     private final MessageQueueService messageQueueService;
+    private final TelegramMediaService mediaService;
     private final WebClient webClient;
 
     @Value("${bot.telegram.username}")
@@ -37,11 +45,13 @@ public class FinanceiroBot extends TelegramLongPollingBot {
             TelegramVinculoService vinculoService,
             BotSessionManager sessionManager,
             MessageQueueService messageQueueService,
+            TelegramMediaService mediaService,
             @Value("${bot.telegram.token}") String token) {
         super(token);
         this.vinculoService = vinculoService;
         this.sessionManager = sessionManager;
         this.messageQueueService = messageQueueService;
+        this.mediaService = mediaService;
         this.webClient = WebClient.builder().build();
     }
 
@@ -52,15 +62,43 @@ public class FinanceiroBot extends TelegramLongPollingBot {
     public void onUpdateReceived(Update update) {
         log.info("[Bot] onUpdateReceived triggered. Update details: {}", update);
 
-        if (!update.hasMessage() || !update.getMessage().hasText()) {
-            log.debug("[Bot] Update skipped - no text message present");
+        if (!update.hasMessage()) {
+            log.debug("[Bot] Update skipped - no message present");
             return;
         }
 
-        String chatId  = String.valueOf(update.getMessage().getChatId());
-        String texto   = update.getMessage().getText();
-        String nome    = update.getMessage().getFrom().getFirstName();
+        Message msg = update.getMessage();
+        String chatId = String.valueOf(msg.getChatId());
+        String nome = msg.getFrom().getFirstName();
 
+        // ── Mensagem de VOZ ──────────────────────────────────────────────
+        if (msg.hasVoice()) {
+            log.info("[Bot] Voice message from chatId={}", chatId);
+            String fileId = msg.getVoice().getFileId();
+            String mimeType = msg.getVoice().getMimeType() != null ? msg.getVoice().getMimeType() : "audio/ogg";
+            handleMidia(chatId, nome, fileId, mimeType, TelegramMessageDTO.TipoMensagem.AUDIO);
+            return;
+        }
+
+        // ── Mensagem de FOTO ─────────────────────────────────────────────
+        if (msg.hasPhoto()) {
+            log.info("[Bot] Photo message from chatId={}", chatId);
+            List<PhotoSize> fotos = msg.getPhoto();
+            // Pega a foto de maior resolução
+            PhotoSize fotoMaior = fotos.stream()
+                    .max(Comparator.comparingInt(PhotoSize::getFileSize))
+                    .orElseThrow();
+            handleMidia(chatId, nome, fotoMaior.getFileId(), "image/jpeg", TelegramMessageDTO.TipoMensagem.IMAGEM);
+            return;
+        }
+
+        // ── Mensagem de TEXTO ────────────────────────────────────────────
+        if (!msg.hasText()) {
+            log.debug("[Bot] Update skipped - no text/voice/photo message present");
+            return;
+        }
+
+        String texto = msg.getText();
         log.info("[Bot] Message from chatId={}, nome={}, text='{}'", chatId, nome, texto);
 
         if ("!help".equalsIgnoreCase(texto.trim())) {
@@ -90,6 +128,28 @@ public class FinanceiroBot extends TelegramLongPollingBot {
         } catch (Exception e) {
             log.error("[Bot] Falha ao enfileirar mensagem de chatId={}: {}", chatId, e.getMessage());
             enviarResposta(chatId, "Desculpe, estou com dificuldade para processar sua mensagem agora. Tente novamente em alguns segundos.");
+        }
+    }
+
+    /**
+     * Baixa um arquivo do Telegram e enfileira no RabbitMQ como mídia (áudio ou imagem).
+     */
+    private void handleMidia(String chatId, String nome, String fileId,
+                               String mimeType, TelegramMessageDTO.TipoMensagem tipo) {
+        try {
+            enviarResposta(chatId, tipo == TelegramMessageDTO.TipoMensagem.AUDIO
+                ? "🎤 Recebi seu áudio! Processando..."
+                : "📷 Recebi sua foto! Analisando o comprovante...");
+
+            byte[] bytes = mediaService.baixarArquivo(fileId);
+            String base64 = Base64.getEncoder().encodeToString(bytes);
+            messageQueueService.submeterMidia(chatId, nome, tipo, base64, mimeType);
+
+        } catch (Exception e) {
+            log.error("[Bot] Erro ao processar mídia ({}) de chatId={}: {}", tipo, chatId, e.getMessage());
+            enviarResposta(chatId, "Desculpe, não consegui processar sua " +
+                    (tipo == TelegramMessageDTO.TipoMensagem.AUDIO ? "mensagem de voz." : "foto.") +
+                    " Tente novamente.");
         }
     }
 
@@ -131,12 +191,18 @@ public class FinanceiroBot extends TelegramLongPollingBot {
         }
     }
 
-    private String buildHelpMessage() {
+    public String buildHelpMessage() {
         return """
             *Comandos disponíveis:* ✨
             
             📌 *Registrar gasto*
             Diga: "Gastei 50 reais no Mercado hoje em Alimentação"
+            
+            🎤 *Mensagem de voz*
+            Envie um áudio dizendo o seu gasto — o bot transcreve e registra automaticamente!
+            
+            📷 *Comprovante / Recibo*
+            Tire uma foto do comprovante — o bot lê os dados e pede confirmação antes de registrar.
             
             📊 *Consultar gastos*
             Diga: "Quanto gastei hoje?" ou "Meus gastos dessa semana"
@@ -265,7 +331,7 @@ public class FinanceiroBot extends TelegramLongPollingBot {
                         sessionManager.limpar(chatId);
                     } catch (Exception e) {
                         log.error("[Bot] Erro ao cadastrar usuario chatId={}: {}", chatId, e.getMessage());
-                        
+
                         if (e.getMessage() != null && e.getMessage().contains("já está em uso")) {
                             enviarResposta(chatId, "❌ Esse e-mail já está em uso.\nSe esta é sua conta, responda *SIM* para fazer login, ou digite um e-mail diferente:");
                             sessionManager.setEstado(chatId, BotSessionState.AGUARDANDO_CHOICE);
@@ -274,6 +340,12 @@ public class FinanceiroBot extends TelegramLongPollingBot {
                             sessionManager.setEstado(chatId, BotSessionState.AGUARDANDO_EMAIL_CADASTRO);
                         }
                     }
+                }
+
+                // O estado AGUARDANDO_CONFIRMACAO_COMPROVANTE é tratado no TelegramMessageConsumer
+                case AGUARDANDO_CONFIRMACAO_COMPROVANTE -> {
+                    // Não deve cair aqui no fluxo de autenticação — o consumer cuida disso
+                    log.warn("[Bot] Estado AGUARDANDO_CONFIRMACAO_COMPROVANTE alcançado no fluxo de autenticação para chatId={}", chatId);
                 }
             }
         } catch (Exception e) {
