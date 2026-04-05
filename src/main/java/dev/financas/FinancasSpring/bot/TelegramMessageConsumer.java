@@ -1,5 +1,6 @@
 package dev.financas.FinancasSpring.bot;
 
+import com.rabbitmq.client.Channel;
 import dev.financas.FinancasSpring.configuration.RabbitMQConfig;
 import dev.financas.FinancasSpring.model.dto.TelegramMessageDTO;
 import dev.financas.FinancasSpring.model.entities.TelegramVinculo;
@@ -11,7 +12,10 @@ import dev.financas.FinancasSpring.services.TelegramVinculoService;
 import dev.financas.FinancasSpring.model.entities.Gasto.CategoriaGasto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.support.AmqpHeaders;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -27,6 +31,9 @@ import java.util.concurrent.ScheduledFuture;
  * - TEXTO: fluxo normal de autenticação + IA
  * - AUDIO: transcrição via Gemini e encaminhamento para IA
  * - IMAGEM: leitura de comprovante via Gemini Vision + confirmação do usuário
+ * <p>
+ * Usa AcknowledgeMode.MANUAL — a mensagem só sai da fila após basicAck().
+ * Em caso de erro, basicNack() envia para a DLQ.
  */
 @Slf4j
 @Component
@@ -42,13 +49,17 @@ public class TelegramMessageConsumer {
     private final BotSessionManager sessionManager;
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE)
-    public void processarMensagem(TelegramMessageDTO mensagem) {
+    public void processarMensagem(TelegramMessageDTO mensagem,
+                                   Channel channel,
+                                   @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag) {
         String chatId = mensagem.getChatId();
         String nome = mensagem.getNome();
         TelegramMessageDTO.TipoMensagem tipo = mensagem.getTipo() != null
                 ? mensagem.getTipo()
                 : TelegramMessageDTO.TipoMensagem.TEXTO;
 
+        // MDC para correlação de logs por chatId
+        MDC.put("chatId", chatId);
         log.info("[Consumer] Processando mensagem da fila: chatId={}, tipo={}", chatId, tipo);
 
         try {
@@ -57,9 +68,21 @@ public class TelegramMessageConsumer {
                 case IMAGEM -> processarImagem(chatId, nome, mensagem.getMediaBase64(), mensagem.getMimeType());
                 default -> processarTexto(chatId, nome, mensagem.getTexto());
             }
+
+            // Mensagem processada com sucesso — confirma para o RabbitMQ
+            channel.basicAck(deliveryTag, false);
+
         } catch (Exception e) {
             log.error("[Consumer] Erro crítico ao processar mensagem chatId={}: {}", chatId, e.getMessage(), e);
             financeiroBot.enviarResposta(chatId, "Tive um problema para processar sua mensagem. Tente novamente em alguns segundos.");
+            try {
+                // Não reenfileira (requeue=false) — vai para a DLQ
+                channel.basicNack(deliveryTag, false, false);
+            } catch (Exception ackEx) {
+                log.error("[Consumer] Falha ao fazer nack da mensagem: {}", ackEx.getMessage());
+            }
+        } finally {
+            MDC.remove("chatId");
         }
     }
 
@@ -120,24 +143,27 @@ public class TelegramMessageConsumer {
                 return;
             }
 
-            // Salva os dados temporariamente na sessão
             sessionManager.setDado(chatId, "comp_estabelecimento", dados.estabelecimento());
             sessionManager.setDado(chatId, "comp_valor", dados.valor());
             sessionManager.setDado(chatId, "comp_data", dados.data());
             sessionManager.setDado(chatId, "comp_categoria", dados.categoria());
+            sessionManager.setDado(chatId, "comp_descricao", dados.descricao());
             sessionManager.setEstado(chatId, BotSessionState.AGUARDANDO_CONFIRMACAO_COMPROVANTE);
+
+            String mascaraDesc = ("DESCONHECIDO".equalsIgnoreCase(dados.descricao()) || dados.descricao().isBlank()) ? "" : "\n• Descrição/Itens: " + dados.descricao();
 
             String mensagemConfirmacao = String.format(
                 "📋 *Dados lidos do comprovante:*\n\n" +
                 "• Local: %s\n" +
                 "• Valor: R$ %s\n" +
                 "• Data: %s\n" +
-                "• Categoria: %s\n\n" +
+                "• Categoria: %s%s\n\n" +
                 "As informações estão corretas? Responda *SIM* para registrar ou *NÃO* para cancelar.",
                 dados.estabelecimento(),
                 dados.valor(),
                 dados.data(),
-                dados.categoria()
+                dados.categoria(),
+                mascaraDesc
             );
 
             typingFuture.cancel(false);
@@ -206,20 +232,27 @@ public class TelegramMessageConsumer {
                 String valorStr = sessionManager.getDado(chatId, "comp_valor");
                 String dataStr = sessionManager.getDado(chatId, "comp_data");
                 String categoriaStr = sessionManager.getDado(chatId, "comp_categoria");
+                String descricao = sessionManager.getDado(chatId, "comp_descricao");
+                if ("DESCONHECIDO".equalsIgnoreCase(descricao)) {
+                    descricao = null;
+                }
 
                 BigDecimal valor = parsearValor(valorStr);
                 LocalDate data = parsearData(dataStr);
                 CategoriaGasto categoria = parsearCategoria(categoriaStr);
 
-                gastoService.registrar(vinculo, estabelecimento, valor, categoria, data);
+                gastoService.registrar(vinculo, estabelecimento, valor, categoria, data, descricao);
 
                 sessionManager.limpar(chatId);
-                // Restaura estado NONE sem limpar dados desnecessários
+                
+                String mascaraDesc = (descricao == null || descricao.isBlank()) ? "" : "\n• Descrição: " + descricao;
+                
                 financeiroBot.enviarResposta(chatId, String.format(
                     "✅ *Gasto registrado com sucesso!*\n\n" +
-                    "• Local: %s\n• Valor: R$ %.2f\n• Categoria: %s\n• Data: %s",
+                    "• Local: %s\n• Valor: R$ %.2f\n• Categoria: %s\n• Data: %s%s",
                     estabelecimento, valor, categoria.name(),
-                    data.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                    data.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+                    mascaraDesc
                 ));
 
             } catch (Exception e) {
@@ -248,8 +281,9 @@ public class TelegramMessageConsumer {
         String valor = extrairCampo(texto, "VALOR");
         String data = extrairCampo(texto, "DATA");
         String categoria = extrairCampo(texto, "CATEGORIA");
+        String descricao = extrairCampo(texto, "DESCRICAO");
 
-        return new DadosComprovante(estabelecimento, valor, data, categoria);
+        return new DadosComprovante(estabelecimento, valor, data, categoria, descricao);
     }
 
     private String extrairCampo(String texto, String campo) {
@@ -291,7 +325,7 @@ public class TelegramMessageConsumer {
     }
 
     /** Record imutável que representa os dados extraídos de um comprovante. */
-    private record DadosComprovante(String estabelecimento, String valor, String data, String categoria) {
+    private record DadosComprovante(String estabelecimento, String valor, String data, String categoria, String descricao) {
         boolean invalido() {
             return "DESCONHECIDO".equalsIgnoreCase(estabelecimento) && "DESCONHECIDO".equalsIgnoreCase(valor);
         }

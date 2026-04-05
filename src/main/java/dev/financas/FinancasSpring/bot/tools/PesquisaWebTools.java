@@ -6,6 +6,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+
+import java.time.Duration;
 import java.util.Map;
 
 /**
@@ -40,6 +42,7 @@ public class PesquisaWebTools {
                 .uri(url)
                 .retrieve()
                 .bodyToMono(Map.class)
+                .timeout(Duration.ofSeconds(15))
                 .block();
 
             if (response == null) return "Não consegui buscar a cotação no momento.";
@@ -75,6 +78,7 @@ public class PesquisaWebTools {
                 .uri(url)
                 .retrieve()
                 .bodyToMono(Map.class)
+                .timeout(Duration.ofSeconds(15))
                 .block();
 
             if (response == null) return "Não encontrei resultados para: " + query;

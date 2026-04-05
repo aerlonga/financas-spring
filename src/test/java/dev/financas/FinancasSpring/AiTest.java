@@ -3,6 +3,7 @@ package dev.financas.FinancasSpring;
 import dev.langchain4j.data.message.*;
 import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel;
 import dev.langchain4j.model.output.Response;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -11,6 +12,7 @@ import java.util.List;
 
 @SpringBootTest
 @ActiveProfiles("local")
+@Disabled("Teste manual — requer GEMINI_API_KEY real. Executar com: mvn test -Dtest=AiTest -Dspring.profiles.active=local")
 public class AiTest {
 
     @Test

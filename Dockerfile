@@ -9,11 +9,11 @@ RUN mvn package -DskipTests
 # Stage 2: Create the final image
 FROM eclipse-temurin:17-jre-focal
 
-# Install gosu for secure user switching
+# Install gosu for secure user switching + curl for health checks
 ENV GOSU_VERSION 1.17
 RUN set -eux; \
     apt-get update; \
-    apt-get install -y --no-install-recommends ca-certificates wget; \
+    apt-get install -y --no-install-recommends ca-certificates wget curl netcat-openbsd; \
     if ! command -v gpg; then \
     apt-get install -y --no-install-recommends gnupg dirmngr; \
     fi; \
@@ -53,5 +53,18 @@ EXPOSE 8080
 
 # Set the entrypoint. It will run as root initially.
 ENTRYPOINT ["/app/entrypoint.sh"]
-# The default command that the entrypoint will execute as 'appuser'
-CMD ["java", "-jar", "app.jar"]
+
+# JVM flags otimizados para containers:
+# -XX:+UseContainerSupport: respeita os limits de memória do Docker
+# -XX:MaxRAMPercentage=75: usa até 75% da memória disponível
+# -XX:InitialRAMPercentage=50: inicia com 50% da memória
+# -Djava.security.egd: evita bloqueio em geração de random (startup mais rápido)
+CMD ["java", \
+     "-XX:+UseContainerSupport", \
+     "-XX:MaxRAMPercentage=75.0", \
+     "-XX:InitialRAMPercentage=50.0", \
+     "-Djava.security.egd=file:/dev/./urandom", \
+     "-Dfile.encoding=UTF-8", \
+     "-Dstdout.encoding=UTF-8", \
+     "-Dstderr.encoding=UTF-8", \
+     "-jar", "app.jar"]

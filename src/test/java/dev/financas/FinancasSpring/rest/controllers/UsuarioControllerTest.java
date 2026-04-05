@@ -285,4 +285,99 @@ public class UsuarioControllerTest {
                 .with(csrf()))
                 .andExpect(status().isNoContent());
     }
+
+    // ─── Testes de validação e cenários de erro ───────────────────────────
+
+    @Test
+    @WithMockUser
+    public void naoDeveCriarUsuarioComNomeVazio() throws Exception {
+        when(usuarioRepository.findByEmail(anyString())).thenReturn(Optional.empty());
+
+        UsuarioCreateDTO dto = UsuarioCreateDTO.builder()
+                .nomeCompleto("")
+                .email("teste@email.com")
+                .senha("senha123")
+                .build();
+
+        mockMvc.perform(post("/usuarios")
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser
+    public void naoDeveCriarUsuarioComEmailInvalido() throws Exception {
+        UsuarioCreateDTO dto = UsuarioCreateDTO.builder()
+                .nomeCompleto("Nome Valido Teste")
+                .email("email-invalido")
+                .senha("senha123")
+                .build();
+
+        mockMvc.perform(post("/usuarios")
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser
+    public void naoDeveCriarUsuarioComSenhaCurta() throws Exception {
+        when(usuarioRepository.findByEmail(anyString())).thenReturn(Optional.empty());
+
+        UsuarioCreateDTO dto = UsuarioCreateDTO.builder()
+                .nomeCompleto("Nome Valido Teste")
+                .email("teste@email.com")
+                .senha("123")
+                .build();
+
+        mockMvc.perform(post("/usuarios")
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    public void deveRetornar401SemAutenticaoAoListar() throws Exception {
+        mockMvc.perform(get("/usuarios"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    public void deveRetornar401SemAutenticaoAoBuscarPorId() throws Exception {
+        mockMvc.perform(get("/usuarios/{id}", 1L))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser
+    public void deveRetornar404AoBuscarUsuarioInexistente() throws Exception {
+        when(usuarioService.findById(99L))
+                .thenThrow(new dev.financas.FinancasSpring.exceptions.ResourceNotFoundException("Usuário não encontrado com o ID: 99"));
+
+        mockMvc.perform(get("/usuarios/{id}", 99L))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser
+    public void naoDeveCriarUsuarioComNomeCurto() throws Exception {
+        when(usuarioRepository.findByEmail(anyString())).thenReturn(Optional.empty());
+
+        UsuarioCreateDTO dto = UsuarioCreateDTO.builder()
+                .nomeCompleto("Ab")
+                .email("teste@email.com")
+                .senha("senha123")
+                .build();
+
+        mockMvc.perform(post("/usuarios")
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isBadRequest());
+    }
 }
+

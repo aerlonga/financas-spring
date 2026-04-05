@@ -13,6 +13,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 
 @Configuration
 @EnableMethodSecurity(prePostEnabled = true)
@@ -35,6 +36,12 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 // Torna a sessão stateless, essencial para APIs baseadas em token
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // Headers de segurança
+                .headers(headers -> headers
+                        .contentTypeOptions(opt -> {}) // X-Content-Type-Options: nosniff
+                        .frameOptions(frame -> frame.deny()) // X-Frame-Options: DENY
+                        .referrerPolicy(ref -> ref.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+                )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/auth/**",
@@ -42,7 +49,8 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
                                 "/swagger-resources/**",
-                                "/api/telegram/confirmar")
+                                "/api/telegram/confirmar",
+                                "/actuator/health")
                         .permitAll()
                         // Permite a criação de usuário (cadastro) sem autenticação
                         .requestMatchers(HttpMethod.POST, "/usuarios").permitAll()

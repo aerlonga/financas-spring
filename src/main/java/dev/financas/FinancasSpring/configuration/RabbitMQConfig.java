@@ -6,6 +6,7 @@ import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -26,6 +27,12 @@ public class RabbitMQConfig {
     public static final String DLQ = "telegram.messages.dlq";
     public static final String DLX = "telegram.exchange.dlx";
     public static final String DLQ_ROUTING_KEY = "telegram.message.dead";
+
+    @Value("${app.rabbitmq.consumers.min:3}")
+    private int minConsumers;
+
+    @Value("${app.rabbitmq.consumers.max:5}")
+    private int maxConsumers;
 
     // ── Conversor JSON ──
 
@@ -92,11 +99,11 @@ public class RabbitMQConfig {
         factory.setMessageConverter(jsonMessageConverter());
         // Processa 1 mensagem por vez para controle de fluxo
         factory.setPrefetchCount(1);
-        // Número de consumidores concorrentes (chats diferentes em paralelo)
-        factory.setConcurrentConsumers(3);
-        factory.setMaxConcurrentConsumers(5);
+        // Número de consumidores concorrentes (configurável via properties)
+        factory.setConcurrentConsumers(minConsumers);
+        factory.setMaxConcurrentConsumers(maxConsumers);
         // Acknowledge manual para garantir que a mensagem só saia da fila após processada
-        factory.setAcknowledgeMode(AcknowledgeMode.AUTO);
+        factory.setAcknowledgeMode(AcknowledgeMode.MANUAL);
         return factory;
     }
 }
