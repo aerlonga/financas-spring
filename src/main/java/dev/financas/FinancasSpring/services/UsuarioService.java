@@ -7,12 +7,12 @@ import dev.financas.FinancasSpring.rest.dto.UsuarioUpdateDTO;
 import dev.financas.FinancasSpring.rest.mapper.UsuarioMapper;
 import dev.financas.FinancasSpring.model.entities.Usuario;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 // import java.util.Optional;
 
 @Service
-
 public class UsuarioService {
     private final UsuarioRepository usuarioRepository;
     private final UsuarioMapper usuarioMapper;
@@ -22,10 +22,12 @@ public class UsuarioService {
         this.usuarioMapper = usuarioMapper;
     }
 
+    @Transactional(readOnly = true)
     public List<Usuario> findAll() {
         return usuarioRepository.findAll();
     }
 
+    @Transactional(readOnly = true)
     public Usuario findById(Long id) {
         return usuarioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado com o ID: " + id));
@@ -36,6 +38,7 @@ public class UsuarioService {
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado com o e-mail: " + email));
     }
 
+    @Transactional
     public Usuario save(Usuario usuario) {
         if (usuarioRepository.existsByEmail(usuario.getEmail())) {
             throw new BusinessException("O e-mail informado já está em uso.");
@@ -46,6 +49,7 @@ public class UsuarioService {
         return usuarioRepository.save(usuario);
     }
 
+    @Transactional
     public void deleteById(Long id) {
         if (!usuarioRepository.existsById(id)) {
             throw new ResourceNotFoundException("Usuário não encontrado com o ID: " + id);
@@ -53,6 +57,7 @@ public class UsuarioService {
         usuarioRepository.deleteById(id);
     }
 
+    @Transactional
     public Usuario atualizar(Long id, UsuarioUpdateDTO dto) {
         Usuario usuario = this.findById(id);
 

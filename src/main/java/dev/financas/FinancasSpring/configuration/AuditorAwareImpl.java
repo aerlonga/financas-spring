@@ -18,10 +18,9 @@ public class AuditorAwareImpl implements AuditorAware<String> {
 
         if (authentication != null && authentication.isAuthenticated()
                 && !"anonymousUser".equals(authentication.getPrincipal())) {
-            return Optional.of(authentication.getName()); // pega o username/email do usuário logado
+            return Optional.of(authentication.getName());
         }
 
-        // fallback para quando não há login
         return Optional.of("sistema");
     }
 }

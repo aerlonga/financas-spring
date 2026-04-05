@@ -4,6 +4,7 @@ import dev.financas.FinancasSpring.exceptions.BusinessException;
 import dev.financas.FinancasSpring.exceptions.ResourceNotFoundException;
 import dev.financas.FinancasSpring.model.entities.Usuario;
 import dev.financas.FinancasSpring.model.repository.UsuarioRepository;
+import dev.financas.FinancasSpring.rest.dto.UsuarioUpdateDTO;
 import dev.financas.FinancasSpring.rest.mapper.UsuarioMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,11 +12,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
@@ -89,5 +92,80 @@ public class UsuarioServiceTest {
         });
 
         assertThat(exception.getMessage()).isEqualTo("Usuário não encontrado com o ID: " + id);
+    }
+
+    @Test
+    void deveListarTodosUsuarios() {
+        // Cenário
+        Usuario usuario = Usuario.builder().id(1L).build();
+        when(usuarioRepository.findAll()).thenReturn(List.of(usuario));
+
+        // Execução
+        List<Usuario> usuarios = usuarioService.findAll();
+
+        // Verificação
+        assertThat(usuarios).isNotEmpty();
+        assertThat(usuarios).hasSize(1);
+    }
+
+    @Test
+    void deveBuscarUsuarioPorEmailComTudo() {
+        // Cenário
+        String email = "teste@email.com";
+        Usuario usuario = Usuario.builder().email(email).build();
+        when(usuarioRepository.findWithAllRelationsByEmail(email)).thenReturn(Optional.of(usuario));
+
+        // Execução
+        Usuario resultado = usuarioService.findByEmailComTudo(email);
+
+        // Verificação
+        assertThat(resultado).isNotNull();
+        assertThat(resultado.getEmail()).isEqualTo(email);
+    }
+
+    @Test
+    void deveDeletarUsuarioComSucesso() {
+        // Cenário
+        Long id = 1L;
+        when(usuarioRepository.existsById(id)).thenReturn(true);
+
+        // Execução
+        usuarioService.deleteById(id);
+
+        // Verificação
+        verify(usuarioRepository).deleteById(id);
+    }
+
+    @Test
+    void deveLancarExcecaoAoDeletarUsuarioInexistente() {
+        // Cenário
+        Long id = 99L;
+        when(usuarioRepository.existsById(id)).thenReturn(false);
+
+        // Execução e Verificação
+        assertThrows(ResourceNotFoundException.class, () -> usuarioService.deleteById(id));
+        verify(usuarioRepository, never()).deleteById(anyLong());
+    }
+
+    @Test
+    void deveAtualizarUsuarioComSucesso() {
+        // Cenário
+        Long id = 1L;
+        UsuarioUpdateDTO dto = new UsuarioUpdateDTO();
+        dto.setNomeCompleto("Nome Novo");
+
+        Usuario usuarioExistente = Usuario.builder().id(id).nomeCompleto("Nome Antigo").build();
+        Usuario usuarioSalvo = Usuario.builder().id(id).nomeCompleto("Nome Novo").build();
+
+        when(usuarioRepository.findById(id)).thenReturn(Optional.of(usuarioExistente));
+        when(usuarioRepository.save(any(Usuario.class))).thenReturn(usuarioSalvo);
+
+        // Execução
+        Usuario resultado = usuarioService.atualizar(id, dto);
+
+        // Verificação
+        assertThat(resultado.getNomeCompleto()).isEqualTo("Nome Novo");
+        verify(usuarioMapper).updateEntity(usuarioExistente, dto); // Verifica se o mapper foi chamado
+        verify(usuarioRepository).save(usuarioExistente);
     }
 }

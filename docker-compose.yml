@@ -1,16 +1,29 @@
 services:
   postgres:
-    image: postgres:16
+    image: pgvector/pgvector:pg16
     container_name: postgres_financas
     restart: always
     environment:
-      POSTGRES_DB: financas
-      POSTGRES_USER: financas_user
-      POSTGRES_PASSWORD: financas_senha
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq_financas
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-financas}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-financas123}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmqdata:/var/lib/rabbitmq
 
   app:
     build:
@@ -24,18 +37,28 @@ services:
       - "8080:8080"
     depends_on:
       - postgres
+      - rabbitmq
     volumes:
       - ./logs:/app/logs
     env_file: .env
     environment:
       - JWT_SECRET=${JWT_SECRET}
       - JWT_EXPIRATION=${JWT_EXPIRATION}
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/financas
-      - SPRING_DATASOURCE_USERNAME=financas_user
-      - SPRING_DATASOURCE_PASSWORD=financas_senha
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/${DB_NAME}
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
       - SPRING_FLYWAY_ENABLED=true
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=${RABBITMQ_USER:-financas}
+      - SPRING_RABBITMQ_PASSWORD=${RABBITMQ_PASS:-financas123}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 
 volumes:
   pgdata:
+  rabbitmqdata:

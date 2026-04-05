@@ -14,8 +14,8 @@ public class SecurityUtil {
      * A permissão é concedida se o usuário for um ADMIN ou se o ID do usuário
      * autenticado for o mesmo que o ID do recurso sendo acessado.
      *
-     * @param id O ID do recurso (por exemplo, o ID do usuário) a ser verificado.
-     * @return true se o acesso for permitido, false caso contrário.
+     * @param id 
+     * @return 
      */
     public boolean isOwnerOrAdmin(Long id) {
         // Temporariamente permitindo tudo para fins de teste de endpoint.

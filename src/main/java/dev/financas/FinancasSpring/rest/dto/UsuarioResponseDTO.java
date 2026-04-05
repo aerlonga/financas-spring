@@ -24,7 +24,7 @@ public class UsuarioResponseDTO {
     private LocalDateTime atualizadoEm;
     private String atualizadoPor;
 
-    private UsuarioDetalhesResponseDTO detalhes;
-    private UsuarioFinanceiroResponseDTO financeiro;
-    private UsuarioPreferenciasResponseDTO preferencias;
+    private DetalhesResponseDTO detalhes;
+    private FinanceiroResponseDTO financeiro;
+    private PreferenciasResponseDTO preferencias;
 }
