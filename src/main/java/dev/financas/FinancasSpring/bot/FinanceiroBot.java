@@ -1,13 +1,13 @@
 package dev.financas.FinancasSpring.bot;
 
 import dev.financas.FinancasSpring.model.dto.TelegramMessageDTO;
+import dev.financas.FinancasSpring.repository.TelegramVinculoRepository;
 import dev.financas.FinancasSpring.services.MessageQueueService;
 import dev.financas.FinancasSpring.services.TelegramMediaService;
 import dev.financas.FinancasSpring.services.TelegramVinculoService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.client.WebClient;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
@@ -18,23 +18,19 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import java.util.Base64;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @Component
 public class FinanceiroBot extends TelegramLongPollingBot {
 
     private final TelegramVinculoService vinculoService;
+    private final TelegramVinculoRepository vinculoRepository;
     private final BotSessionManager sessionManager;
     private final MessageQueueService messageQueueService;
     private final TelegramMediaService mediaService;
-    private final WebClient webClient;
 
     @Value("${bot.telegram.username}")
     private String username;
-
-    @Value("${server.port:8080}")
-    private int serverPort;
 
     @jakarta.annotation.PostConstruct
     public void init() {
@@ -43,16 +39,17 @@ public class FinanceiroBot extends TelegramLongPollingBot {
 
     public FinanceiroBot(
             TelegramVinculoService vinculoService,
+            TelegramVinculoRepository vinculoRepository,
             BotSessionManager sessionManager,
             MessageQueueService messageQueueService,
             TelegramMediaService mediaService,
             @Value("${bot.telegram.token}") String token) {
         super(token);
         this.vinculoService = vinculoService;
+        this.vinculoRepository = vinculoRepository;
         this.sessionManager = sessionManager;
         this.messageQueueService = messageQueueService;
         this.mediaService = mediaService;
-        this.webClient = WebClient.builder().build();
     }
 
     @Override
@@ -92,9 +89,9 @@ public class FinanceiroBot extends TelegramLongPollingBot {
         if (msg.hasPhoto()) {
             log.info("[Bot] Photo message from chatId={}", chatId);
             List<PhotoSize> fotos = msg.getPhoto();
-            // Pega a foto de maior resolução
+            // Pega a foto de maior resolução (null-safe para getFileSize)
             PhotoSize fotoMaior = fotos.stream()
-                    .max(Comparator.comparingInt(PhotoSize::getFileSize))
+                    .max(Comparator.comparingInt(p -> p.getFileSize() != null ? p.getFileSize() : 0))
                     .orElseThrow();
             handleMidia(chatId, nome, fotoMaior.getFileId(), "image/jpeg", TelegramMessageDTO.TipoMensagem.IMAGEM);
             return;
@@ -231,6 +228,10 @@ public class FinanceiroBot extends TelegramLongPollingBot {
             """;
     }
 
+    /**
+     * Vincula uma conta Telegram ao sistema web usando código gerado.
+     * Chamada direta ao repositório — sem self-referencing HTTP.
+     */
     private void handleVincular(String chatId, String codigo) {
         if (codigo.isBlank()) {
             enviarResposta(chatId, "⚠️ Use o comando assim: `/vincular SEU_CODIGO`\nO código é gerado na área de configurações do sistema web.");
@@ -238,14 +239,33 @@ public class FinanceiroBot extends TelegramLongPollingBot {
         }
 
         try {
-            String resultado = webClient.post()
-                    .uri("http://localhost:" + serverPort + "/api/telegram/confirmar")
-                    .bodyValue(Map.of("chatId", chatId, "codigo", codigo))
-                    .retrieve()
-                    .bodyToMono(String.class)
-                    .block();
+            var optVinculo = vinculoRepository.findByCodigoVinculo(codigo.toUpperCase());
 
-            enviarResposta(chatId, "✅ " + resultado);
+            if (optVinculo.isEmpty()) {
+                enviarResposta(chatId, "❌ Código inválido ou expirado. Gere um novo código em: *Configurações → Vincular Telegram*");
+                return;
+            }
+
+            var vinculo = optVinculo.get();
+
+            if (vinculo.getCodigoExpira() == null || java.time.LocalDateTime.now().isAfter(vinculo.getCodigoExpira())) {
+                enviarResposta(chatId, "❌ Código expirado. Gere um novo código na web.");
+                return;
+            }
+
+            // Atualiza o chatId real do Telegram
+            vinculo.setChatId(chatId);
+            vinculo.setCodigoVinculo(null);
+            vinculo.setCodigoExpira(null);
+            vinculo.setUltimaAtividade(java.time.LocalDateTime.now());
+            vinculoRepository.save(vinculo);
+
+            String nomeUsuario = vinculo.getUsuario() != null
+                    ? vinculo.getUsuario().getNomeCompleto()
+                    : "usuário";
+
+            enviarResposta(chatId, "✅ Telegram vinculado com sucesso! Olá, " + nomeUsuario + " 🎉");
+
         } catch (Exception e) {
             log.error("[Bot] Falha ao vincular chatId={} codigo={}: {}", chatId, codigo, e.getMessage());
             enviarResposta(chatId, "❌ Código inválido ou expirado. Gere um novo código em: *Configurações → Vincular Telegram*");
@@ -296,8 +316,23 @@ public class FinanceiroBot extends TelegramLongPollingBot {
                         enviarResposta(chatId, "✅ *Login realizado com sucesso!*\n\nSua conta do Telegram está vinculada ao sistema. Agora você pode registrar gastos e pedir resumos financeiros normalmente! 🚀");
                         sessionManager.limpar(chatId);
                     } catch (Exception e) {
-                        enviarResposta(chatId, "❌ E-mail ou senha incorretos.\nVamos tentar de novo. Qual é o seu *e-mail*?");
+                        enviarResposta(chatId, "❌ *E-mail ou senha incorretos.*\n\nO que deseja fazer?\n\n*1️⃣* Tentar login novamente\n*2️⃣* Criar uma nova conta\n\nResponda *1* ou *2*.");
+                        sessionManager.setEstado(chatId, BotSessionState.AGUARDANDO_RETRY_OU_CADASTRO);
+                    }
+                }
+
+                // ── FLUXO DE RETRY APÓS FALHA DE LOGIN ──
+
+                case AGUARDANDO_RETRY_OU_CADASTRO -> {
+                    String resposta = texto.trim();
+                    if (resposta.equals("1")) {
+                        enviarResposta(chatId, "📧 Certo! Qual é o seu *e-mail* cadastrado?");
                         sessionManager.setEstado(chatId, BotSessionState.AGUARDANDO_EMAIL_LOGIN);
+                    } else if (resposta.equals("2")) {
+                        enviarResposta(chatId, "📝 Vamos criar sua conta então!\nQual é o seu *nome completo*?");
+                        sessionManager.setEstado(chatId, BotSessionState.AGUARDANDO_NOME_CADASTRO);
+                    } else {
+                        enviarResposta(chatId, "🤔 Por favor, responda *1* para tentar login novamente ou *2* para criar uma nova conta.");
                     }
                 }
 

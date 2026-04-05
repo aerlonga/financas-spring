@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.time.Duration;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
@@ -53,6 +54,7 @@ public class TelegramMediaService {
                     .uri(getFileUrl)
                     .retrieve()
                     .bodyToMono(String.class)
+                    .timeout(Duration.ofSeconds(30))
                     .block();
 
             JsonNode root = objectMapper.readTree(fileInfo);
@@ -68,6 +70,7 @@ public class TelegramMediaService {
                     .uri(downloadUrl)
                     .retrieve()
                     .bodyToMono(byte[].class)
+                    .timeout(Duration.ofSeconds(30))
                     .block();
 
         } catch (Exception e) {
@@ -106,6 +109,7 @@ public class TelegramMediaService {
                     .bodyValue(requestBody)
                     .retrieve()
                     .bodyToMono(String.class)
+                    .timeout(Duration.ofSeconds(60))
                     .block();
 
             return extrairTextoResposta(resposta);
@@ -158,6 +162,7 @@ public class TelegramMediaService {
                     .bodyValue(requestBody)
                     .retrieve()
                     .bodyToMono(String.class)
+                    .timeout(Duration.ofSeconds(60))
                     .block();
 
             return extrairTextoResposta(resposta);

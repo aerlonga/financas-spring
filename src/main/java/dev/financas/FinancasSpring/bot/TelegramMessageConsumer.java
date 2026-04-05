@@ -1,5 +1,6 @@
 package dev.financas.FinancasSpring.bot;
 
+import com.rabbitmq.client.Channel;
 import dev.financas.FinancasSpring.configuration.RabbitMQConfig;
 import dev.financas.FinancasSpring.model.dto.TelegramMessageDTO;
 import dev.financas.FinancasSpring.model.entities.TelegramVinculo;
@@ -11,7 +12,10 @@ import dev.financas.FinancasSpring.services.TelegramVinculoService;
 import dev.financas.FinancasSpring.model.entities.Gasto.CategoriaGasto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.support.AmqpHeaders;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -27,6 +31,9 @@ import java.util.concurrent.ScheduledFuture;
  * - TEXTO: fluxo normal de autenticação + IA
  * - AUDIO: transcrição via Gemini e encaminhamento para IA
  * - IMAGEM: leitura de comprovante via Gemini Vision + confirmação do usuário
+ * <p>
+ * Usa AcknowledgeMode.MANUAL — a mensagem só sai da fila após basicAck().
+ * Em caso de erro, basicNack() envia para a DLQ.
  */
 @Slf4j
 @Component
@@ -42,13 +49,17 @@ public class TelegramMessageConsumer {
     private final BotSessionManager sessionManager;
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE)
-    public void processarMensagem(TelegramMessageDTO mensagem) {
+    public void processarMensagem(TelegramMessageDTO mensagem,
+                                   Channel channel,
+                                   @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag) {
         String chatId = mensagem.getChatId();
         String nome = mensagem.getNome();
         TelegramMessageDTO.TipoMensagem tipo = mensagem.getTipo() != null
                 ? mensagem.getTipo()
                 : TelegramMessageDTO.TipoMensagem.TEXTO;
 
+        // MDC para correlação de logs por chatId
+        MDC.put("chatId", chatId);
         log.info("[Consumer] Processando mensagem da fila: chatId={}, tipo={}", chatId, tipo);
 
         try {
@@ -57,9 +68,21 @@ public class TelegramMessageConsumer {
                 case IMAGEM -> processarImagem(chatId, nome, mensagem.getMediaBase64(), mensagem.getMimeType());
                 default -> processarTexto(chatId, nome, mensagem.getTexto());
             }
+
+            // Mensagem processada com sucesso — confirma para o RabbitMQ
+            channel.basicAck(deliveryTag, false);
+
         } catch (Exception e) {
             log.error("[Consumer] Erro crítico ao processar mensagem chatId={}: {}", chatId, e.getMessage(), e);
             financeiroBot.enviarResposta(chatId, "Tive um problema para processar sua mensagem. Tente novamente em alguns segundos.");
+            try {
+                // Não reenfileira (requeue=false) — vai para a DLQ
+                channel.basicNack(deliveryTag, false, false);
+            } catch (Exception ackEx) {
+                log.error("[Consumer] Falha ao fazer nack da mensagem: {}", ackEx.getMessage());
+            }
+        } finally {
+            MDC.remove("chatId");
         }
     }
 
@@ -214,7 +237,6 @@ public class TelegramMessageConsumer {
                 gastoService.registrar(vinculo, estabelecimento, valor, categoria, data);
 
                 sessionManager.limpar(chatId);
-                // Restaura estado NONE sem limpar dados desnecessários
                 financeiroBot.enviarResposta(chatId, String.format(
                     "✅ *Gasto registrado com sucesso!*\n\n" +
                     "• Local: %s\n• Valor: R$ %.2f\n• Categoria: %s\n• Data: %s",
