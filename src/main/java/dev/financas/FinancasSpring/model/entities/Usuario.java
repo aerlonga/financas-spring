@@ -34,7 +34,7 @@ public class Usuario implements UserDetails {
     @Column(name = "nome_completo", nullable = false, length = 255)
     private String nomeCompleto;
 
-    @Column(name = "email", nullable = false, unique = true, length = 255)
+    @Column(name = "email", nullable = false, unique = true, columnDefinition = "citext")
     private String email;
 
     @Column(name = "senha_hash", nullable = false, length = 255)

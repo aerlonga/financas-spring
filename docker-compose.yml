@@ -82,6 +82,7 @@ services:
       - JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8
       - LANG=pt_BR.UTF-8
       - LC_ALL=pt_BR.UTF-8
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=none
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
       interval: 30s
