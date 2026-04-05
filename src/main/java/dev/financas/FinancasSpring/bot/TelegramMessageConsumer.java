@@ -143,24 +143,27 @@ public class TelegramMessageConsumer {
                 return;
             }
 
-            // Salva os dados temporariamente na sessão
             sessionManager.setDado(chatId, "comp_estabelecimento", dados.estabelecimento());
             sessionManager.setDado(chatId, "comp_valor", dados.valor());
             sessionManager.setDado(chatId, "comp_data", dados.data());
             sessionManager.setDado(chatId, "comp_categoria", dados.categoria());
+            sessionManager.setDado(chatId, "comp_descricao", dados.descricao());
             sessionManager.setEstado(chatId, BotSessionState.AGUARDANDO_CONFIRMACAO_COMPROVANTE);
+
+            String mascaraDesc = ("DESCONHECIDO".equalsIgnoreCase(dados.descricao()) || dados.descricao().isBlank()) ? "" : "\n• Descrição/Itens: " + dados.descricao();
 
             String mensagemConfirmacao = String.format(
                 "📋 *Dados lidos do comprovante:*\n\n" +
                 "• Local: %s\n" +
                 "• Valor: R$ %s\n" +
                 "• Data: %s\n" +
-                "• Categoria: %s\n\n" +
+                "• Categoria: %s%s\n\n" +
                 "As informações estão corretas? Responda *SIM* para registrar ou *NÃO* para cancelar.",
                 dados.estabelecimento(),
                 dados.valor(),
                 dados.data(),
-                dados.categoria()
+                dados.categoria(),
+                mascaraDesc
             );
 
             typingFuture.cancel(false);
@@ -229,19 +232,27 @@ public class TelegramMessageConsumer {
                 String valorStr = sessionManager.getDado(chatId, "comp_valor");
                 String dataStr = sessionManager.getDado(chatId, "comp_data");
                 String categoriaStr = sessionManager.getDado(chatId, "comp_categoria");
+                String descricao = sessionManager.getDado(chatId, "comp_descricao");
+                if ("DESCONHECIDO".equalsIgnoreCase(descricao)) {
+                    descricao = null;
+                }
 
                 BigDecimal valor = parsearValor(valorStr);
                 LocalDate data = parsearData(dataStr);
                 CategoriaGasto categoria = parsearCategoria(categoriaStr);
 
-                gastoService.registrar(vinculo, estabelecimento, valor, categoria, data);
+                gastoService.registrar(vinculo, estabelecimento, valor, categoria, data, descricao);
 
                 sessionManager.limpar(chatId);
+                
+                String mascaraDesc = (descricao == null || descricao.isBlank()) ? "" : "\n• Descrição: " + descricao;
+                
                 financeiroBot.enviarResposta(chatId, String.format(
                     "✅ *Gasto registrado com sucesso!*\n\n" +
-                    "• Local: %s\n• Valor: R$ %.2f\n• Categoria: %s\n• Data: %s",
+                    "• Local: %s\n• Valor: R$ %.2f\n• Categoria: %s\n• Data: %s%s",
                     estabelecimento, valor, categoria.name(),
-                    data.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                    data.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+                    mascaraDesc
                 ));
 
             } catch (Exception e) {
@@ -270,8 +281,9 @@ public class TelegramMessageConsumer {
         String valor = extrairCampo(texto, "VALOR");
         String data = extrairCampo(texto, "DATA");
         String categoria = extrairCampo(texto, "CATEGORIA");
+        String descricao = extrairCampo(texto, "DESCRICAO");
 
-        return new DadosComprovante(estabelecimento, valor, data, categoria);
+        return new DadosComprovante(estabelecimento, valor, data, categoria, descricao);
     }
 
     private String extrairCampo(String texto, String campo) {
@@ -313,7 +325,7 @@ public class TelegramMessageConsumer {
     }
 
     /** Record imutável que representa os dados extraídos de um comprovante. */
-    private record DadosComprovante(String estabelecimento, String valor, String data, String categoria) {
+    private record DadosComprovante(String estabelecimento, String valor, String data, String categoria, String descricao) {
         boolean invalido() {
             return "DESCONHECIDO".equalsIgnoreCase(estabelecimento) && "DESCONHECIDO".equalsIgnoreCase(valor);
         }

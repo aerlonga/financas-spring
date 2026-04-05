@@ -141,6 +141,7 @@ public class TelegramMediaService {
                 VALOR: [valor numérico em reais, ex: 49.90]
                 DATA: [data no formato dd/MM/yyyy, ou "hoje" se não visível]
                 CATEGORIA: [uma das opções: ALIMENTACAO, TRANSPORTE, SAUDE, MORADIA, LAZER, EDUCACAO, OUTROS]
+                DESCRICAO: [descrição resumida ou itens principais comprados listados com seus valores se possível. Use "DESCONHECIDO" se não aplicável]
                 
                 Se algum dado não for visível ou identificável, use "DESCONHECIDO" para esse campo.
                 """;

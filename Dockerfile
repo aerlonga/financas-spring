@@ -64,4 +64,7 @@ CMD ["java", \
      "-XX:MaxRAMPercentage=75.0", \
      "-XX:InitialRAMPercentage=50.0", \
      "-Djava.security.egd=file:/dev/./urandom", \
+     "-Dfile.encoding=UTF-8", \
+     "-Dstdout.encoding=UTF-8", \
+     "-Dstderr.encoding=UTF-8", \
      "-jar", "app.jar"]

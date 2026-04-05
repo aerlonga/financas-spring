@@ -21,10 +21,11 @@ public class GastoService {
 
     @Transactional
     public Gasto registrar(TelegramVinculo vinculo, String estabelecimento,
-                           BigDecimal valor, CategoriaGasto categoria, LocalDate data) {
+                           BigDecimal valor, CategoriaGasto categoria, LocalDate data, String descricao) {
         Gasto gasto = Gasto.builder()
             .telegramVinculo(vinculo)
             .estabelecimento(estabelecimento)
+            .descricao(descricao)
             .valor(valor)
             .categoria(categoria)
             .dataGasto(data != null ? data : LocalDate.now())
@@ -56,14 +57,16 @@ public class GastoService {
         sb.append(String.format("Registros: %d\n\n", gastos.size()));
         sb.append("Últimos lançamentos:\n");
 
-        gastos.stream().limit(5).forEach(g ->
-            sb.append(String.format("• %s: %s - R$ %.2f (%s) [ID: %d]\n",
+        gastos.stream().limit(5).forEach(g -> {
+            String desc = (g.getDescricao() != null && !g.getDescricao().isBlank()) ? "\n  Descrição: " + g.getDescricao() : "";
+            sb.append(String.format("• %s: %s - R$ %.2f (%s) [ID: %d]%s\n",
                 g.getDataGasto().format(FMT),
                 g.getEstabelecimento(),
                 g.getValor(),
                 g.getCategoria().name(),
-                g.getId()))
-        );
+                g.getId(),
+                desc));
+        });
 
         if (gastos.size() > 5) {
             sb.append(String.format("...e mais %d lançamentos.", gastos.size() - 5));
@@ -77,8 +80,9 @@ public class GastoService {
         return repository.findFirstByTelegramVinculoOrderByCriadoEmDesc(vinculo)
             .map(gasto -> {
                 repository.delete(gasto);
-                return String.format("🗑️ Gasto apagado com sucesso!\n• Local: %s\n• Valor: R$ %.2f\n• Categoria: %s",
-                    gasto.getEstabelecimento(), gasto.getValor(), gasto.getCategoria().name());
+                String desc = (gasto.getDescricao() != null && !gasto.getDescricao().isBlank()) ? "\n• Descrição: " + gasto.getDescricao() : "";
+                return String.format("🗑️ Gasto apagado com sucesso!\n• Local: %s\n• Valor: R$ %.2f\n• Categoria: %s%s",
+                    gasto.getEstabelecimento(), gasto.getValor(), gasto.getCategoria().name(), desc);
             })
             .orElse("Nenhum gasto encontrado para apagar.");
     }
@@ -91,8 +95,9 @@ public class GastoService {
                     return "🚫 Operação não autorizada. O gasto não pertence a você.";
                 }
                 repository.delete(gasto);
-                return String.format("🗑️ Gasto apagado com sucesso!\n• Local: %s\n• Valor: R$ %.2f\n• Categoria: %s",
-                    gasto.getEstabelecimento(), gasto.getValor(), gasto.getCategoria().name());
+                String desc = (gasto.getDescricao() != null && !gasto.getDescricao().isBlank()) ? "\n• Descrição: " + gasto.getDescricao() : "";
+                return String.format("🗑️ Gasto apagado com sucesso!\n• Local: %s\n• Valor: R$ %.2f\n• Categoria: %s%s",
+                    gasto.getEstabelecimento(), gasto.getValor(), gasto.getCategoria().name(), desc);
             })
             .orElse("Nenhum gasto encontrado com o ID informado.");
     }
@@ -100,7 +105,7 @@ public class GastoService {
     @Transactional
     public String editarGasto(TelegramVinculo vinculo, Long id,
                               String novoEstabelecimento, Double novoValor,
-                              CategoriaGasto novaCategoria, LocalDate novaData) {
+                              CategoriaGasto novaCategoria, LocalDate novaData, String novaDescricao) {
         return repository.findById(id)
             .map(gasto -> {
                 if (!gasto.getTelegramVinculo().getId().equals(vinculo.getId())) {
@@ -108,6 +113,13 @@ public class GastoService {
                 }
                 if (novoEstabelecimento != null && !novoEstabelecimento.isBlank()) {
                     gasto.setEstabelecimento(novoEstabelecimento);
+                }
+                if (novaDescricao != null && !novaDescricao.isBlank()) {
+                    if (novaDescricao.equalsIgnoreCase("apagar_descricao")) {
+                        gasto.setDescricao(null);
+                    } else {
+                        gasto.setDescricao(novaDescricao);
+                    }
                 }
                 if (novoValor != null) {
                     gasto.setValor(BigDecimal.valueOf(novoValor));
@@ -119,9 +131,10 @@ public class GastoService {
                     gasto.setDataGasto(novaData);
                 }
                 repository.save(gasto);
-                return String.format("✅ Gasto atualizado com sucesso!\n• Local: %s\n• Valor: R$ %.2f\n• Categoria: %s\n• Data: %s",
+                String desc = (gasto.getDescricao() != null && !gasto.getDescricao().isBlank()) ? "\n• Descrição: " + gasto.getDescricao() : "";
+                return String.format("✅ Gasto atualizado com sucesso!\n• Local: %s\n• Valor: R$ %.2f\n• Categoria: %s\n• Data: %s%s",
                     gasto.getEstabelecimento(), gasto.getValor(), gasto.getCategoria().name(),
-                    gasto.getDataGasto().format(FMT));
+                    gasto.getDataGasto().format(FMT), desc);
             })
             .orElse("Nenhum gasto encontrado com o ID informado.");
     }
