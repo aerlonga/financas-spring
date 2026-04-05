@@ -71,11 +71,19 @@ public class FinanceiroBot extends TelegramLongPollingBot {
         String chatId = String.valueOf(msg.getChatId());
         String nome = msg.getFrom().getFirstName();
 
-        // ── Mensagem de VOZ ──────────────────────────────────────────────
+        // ── Mensagem de VOZ ou ÁUDIO ─────────────────────────────────────
         if (msg.hasVoice()) {
             log.info("[Bot] Voice message from chatId={}", chatId);
             String fileId = msg.getVoice().getFileId();
             String mimeType = msg.getVoice().getMimeType() != null ? msg.getVoice().getMimeType() : "audio/ogg";
+            handleMidia(chatId, nome, fileId, mimeType, TelegramMessageDTO.TipoMensagem.AUDIO);
+            return;
+        }
+
+        if (msg.hasAudio()) {
+            log.info("[Bot] Audio message from chatId={}", chatId);
+            String fileId = msg.getAudio().getFileId();
+            String mimeType = msg.getAudio().getMimeType() != null ? msg.getAudio().getMimeType() : "audio/mpeg";
             handleMidia(chatId, nome, fileId, mimeType, TelegramMessageDTO.TipoMensagem.AUDIO);
             return;
         }
