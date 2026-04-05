@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 @Slf4j
@@ -34,7 +35,7 @@ public class OrcamentoService {
                 vinculo, inicioMes, hoje, categoria);
 
             if (orc.isEmpty()) {
-                return String.format("Você não definiu um orçamento para %s. Gasto atual: R$ %.2f",
+                return String.format(Locale.forLanguageTag("pt-BR"), "Você não definiu um orçamento para %s. Gasto atual: R$ %.2f",
                     categoria.name(), gasto);
             }
 
@@ -42,7 +43,7 @@ public class OrcamentoService {
             BigDecimal saldo = limite.subtract(gasto);
 
             log.info("[Orcamento] Consulta por categoria: {} para chatId={}", categoria, vinculo.getChatId());
-            return String.format(
+            return String.format(Locale.forLanguageTag("pt-BR"),
                 "Orçamento %s:\nLimite: R$ %.2f\nGasto: R$ %.2f\nSaldo: R$ %.2f%s",
                 categoria.name(), limite, gasto, saldo,
                 saldo.compareTo(BigDecimal.ZERO) < 0 ? "\n⚠️ Orçamento estourado!" : ""
@@ -55,14 +56,14 @@ public class OrcamentoService {
         BigDecimal totalGasto = gastoRepository.somarPorPeriodo(vinculo, inicioMes, hoje);
 
         if (todos.isEmpty()) {
-            return String.format("Nenhum orçamento configurado. Gasto total este mês: R$ %.2f", totalGasto);
+            return String.format(Locale.forLanguageTag("pt-BR"), "Nenhum orçamento configurado. Gasto total este mês: R$ %.2f", totalGasto);
         }
 
         BigDecimal totalLimite = todos.stream()
             .map(OrcamentoCategoria::getValorLimite)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        return String.format(
+        return String.format(Locale.forLanguageTag("pt-BR"),
             "Resumo do mês:\nOrçamento total: R$ %.2f\nTotal gasto: R$ %.2f\nSaldo: R$ %.2f",
             totalLimite, totalGasto, totalLimite.subtract(totalGasto)
         );
@@ -81,6 +82,6 @@ public class OrcamentoService {
         orcamentoRepository.save(orc);
 
         log.info("[Orcamento] Definindo limite de R$ {} para {} (chatId={})", limite, categoria, vinculo.getChatId());
-        return String.format("Orçamento de R$ %.2f definido para %s.", limite, categoria.name());
+        return String.format(Locale.forLanguageTag("pt-BR"), "Orçamento de R$ %.2f definido para %s.", limite, categoria.name());
     }
 }

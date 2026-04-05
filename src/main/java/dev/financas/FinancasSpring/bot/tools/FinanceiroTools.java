@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import org.springframework.lang.Nullable;
+import java.util.Locale;
 
 
 @Component
@@ -63,7 +64,7 @@ public class FinanceiroTools {
 
             String desc = (descricao != null && !descricao.isBlank()) ? "\n• Descrição: " + descricao : "";
 
-            return String.format(
+            return String.format(Locale.forLanguageTag("pt-BR"),
                 "✅ Gasto registrado!\n• Local: %s\n• Valor: R$ %.2f\n• Categoria: %s\n• Data: %s%s",
                 estabelecimento, valor, cat.name(),
                 dataGasto.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")), desc
@@ -94,7 +95,7 @@ public class FinanceiroTools {
     ) {
         TelegramVinculo vinculo = getVinculo();
         economiaService.registrar(vinculo, BigDecimal.valueOf(valor), descricao);
-        return String.format("✅ Economia de R$ %.2f registrada! (%s)", valor, descricao);
+        return String.format(Locale.forLanguageTag("pt-BR"), "✅ Economia de R$ %.2f registrada! (%s)", valor, descricao);
     }
 
     @Tool("Consulta o total economizado pelo usuário em um período específico. Aceita HOJE, SEMANA, MES, TOTAL, ou uma data específica (dd/MM/yyyy) ou intervalo de datas (dd/MM/yyyy-dd/MM/yyyy).")

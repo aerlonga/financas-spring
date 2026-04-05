@@ -1,0 +1,60 @@
+name: CI - Testes Automatizados
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    name: Executar Testes
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Cache do Maven
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Executar testes
+        run: ./mvnw test -B -Dspring.profiles.active=test --no-transfer-progress
+        env:
+          # Variáveis dummy necessárias para o Spring Boot inicializar
+          DB_URL: jdbc:h2:mem:testdb
+          DB_USERNAME: sa
+          DB_PASSWORD: ""
+          JWT_SECRET: ci-test-secret-key-with-at-least-32-characters
+          TELEGRAM_TOKEN: CI_DUMMY_TOKEN
+          TELEGRAM_BOT_USERNAME: ci_test_bot
+          GEMINI_API_KEY: CI_DUMMY_KEY
+          GROQ_API_KEY: CI_DUMMY_KEY
+
+      - name: Publicar resultados dos testes
+        uses: dorny/test-reporter@v1
+        if: success() || failure()
+        with:
+          name: Relatório de Testes
+          path: target/surefire-reports/*.xml
+          reporter: java-junit
+
+      - name: Upload de relatórios Surefire (em caso de falha)
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: surefire-reports
+          path: target/surefire-reports/
+          retention-days: 7

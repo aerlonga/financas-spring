@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -38,6 +39,6 @@ public class EconomiaService {
             periodo = String.format("%s a %s", inicio, fim);
         }
 
-        return String.format("Total economizado (%s): R$ %.2f", periodo, total);
+        return String.format(Locale.forLanguageTag("pt-BR"), "Total economizado (%s): R$ %.2f", periodo, total);
     }
 }

@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -53,13 +54,13 @@ public class GastoService {
         }
 
         StringBuilder sb = new StringBuilder();
-        sb.append(String.format("Total gasto: R$ %.2f\n", total));
+        sb.append(String.format(Locale.forLanguageTag("pt-BR"), "Total gasto: R$ %.2f\n", total));
         sb.append(String.format("Registros: %d\n\n", gastos.size()));
         sb.append("Últimos lançamentos:\n");
 
         gastos.stream().limit(5).forEach(g -> {
             String desc = (g.getDescricao() != null && !g.getDescricao().isBlank()) ? "\n  Descrição: " + g.getDescricao() : "";
-            sb.append(String.format("• %s: %s - R$ %.2f (%s) [ID: %d]%s\n",
+            sb.append(String.format(Locale.forLanguageTag("pt-BR"), "• %s: %s - R$ %.2f (%s) [ID: %d]%s\n",
                 g.getDataGasto().format(FMT),
                 g.getEstabelecimento(),
                 g.getValor(),
@@ -81,7 +82,7 @@ public class GastoService {
             .map(gasto -> {
                 repository.delete(gasto);
                 String desc = (gasto.getDescricao() != null && !gasto.getDescricao().isBlank()) ? "\n• Descrição: " + gasto.getDescricao() : "";
-                return String.format("🗑️ Gasto apagado com sucesso!\n• Local: %s\n• Valor: R$ %.2f\n• Categoria: %s%s",
+                return String.format(Locale.forLanguageTag("pt-BR"), "🗑️ Gasto apagado com sucesso!\n• Local: %s\n• Valor: R$ %.2f\n• Categoria: %s%s",
                     gasto.getEstabelecimento(), gasto.getValor(), gasto.getCategoria().name(), desc);
             })
             .orElse("Nenhum gasto encontrado para apagar.");
@@ -96,7 +97,7 @@ public class GastoService {
                 }
                 repository.delete(gasto);
                 String desc = (gasto.getDescricao() != null && !gasto.getDescricao().isBlank()) ? "\n• Descrição: " + gasto.getDescricao() : "";
-                return String.format("🗑️ Gasto apagado com sucesso!\n• Local: %s\n• Valor: R$ %.2f\n• Categoria: %s%s",
+                return String.format(Locale.forLanguageTag("pt-BR"), "🗑️ Gasto apagado com sucesso!\n• Local: %s\n• Valor: R$ %.2f\n• Categoria: %s%s",
                     gasto.getEstabelecimento(), gasto.getValor(), gasto.getCategoria().name(), desc);
             })
             .orElse("Nenhum gasto encontrado com o ID informado.");
@@ -132,7 +133,7 @@ public class GastoService {
                 }
                 repository.save(gasto);
                 String desc = (gasto.getDescricao() != null && !gasto.getDescricao().isBlank()) ? "\n• Descrição: " + gasto.getDescricao() : "";
-                return String.format("✅ Gasto atualizado com sucesso!\n• Local: %s\n• Valor: R$ %.2f\n• Categoria: %s\n• Data: %s%s",
+                return String.format(Locale.forLanguageTag("pt-BR"), "✅ Gasto atualizado com sucesso!\n• Local: %s\n• Valor: R$ %.2f\n• Categoria: %s\n• Data: %s%s",
                     gasto.getEstabelecimento(), gasto.getValor(), gasto.getCategoria().name(),
                     gasto.getDataGasto().format(FMT), desc);
             })
