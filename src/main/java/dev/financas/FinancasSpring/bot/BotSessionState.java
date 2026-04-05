@@ -30,6 +30,11 @@ public enum BotSessionState {
     /** Cadastro: e-mail recebido, aguardando a senha. */
     AGUARDANDO_SENHA_CADASTRO,
 
+    // ── Fluxo de Retry / Escolha após falha de login ─────────────────────
+
+    /** Login falhou: aguardando o usuário escolher tentar novamente ou cadastrar nova conta. */
+    AGUARDANDO_RETRY_OU_CADASTRO,
+
     // ── Fluxo de Confirmação de Comprovante ──────────────────────────────
 
     /** Bot leu um comprovante e exibiu os dados ao usuário — aguardando SIM ou NÃO para registrar. */

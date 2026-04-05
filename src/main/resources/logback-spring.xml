@@ -3,34 +3,80 @@
 
     <property name="LOGS_DIR" value="logs" />
 
+    <!-- ── Console Appender (todos os profiles) ────────────────────────── -->
     <appender name="Console" class="ch.qos.logback.core.ConsoleAppender">
         <layout class="ch.qos.logback.classic.PatternLayout">
-            <Pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</Pattern>
+            <Pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [chatId=%X{chatId:-}] %-5level %logger{36} - %msg%n</Pattern>
         </layout>
     </appender>
 
+    <!-- ── Rolling File Appender (arquivo com rotação diária) ──────────── -->
     <appender name="RollingFile" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
-            <Pattern>%d %p %C{1} [%t] %m%n</Pattern>
+            <Pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [chatId=%X{chatId:-}] %-5level %C{1} - %msg%n</Pattern>
         </encoder>
 
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <!-- rollover daily -->
             <fileNamePattern>${LOGS_DIR}/app-%d{yyyy-MM-dd}.log</fileNamePattern>
             <maxHistory>30</maxHistory>
+            <totalSizeCap>500MB</totalSizeCap>
         </rollingPolicy>
     </appender>
 
-    <!-- LOG everything at INFO level -->
-    <root level="INFO">
-        <appender-ref ref="RollingFile" />
-        <appender-ref ref="Console" />
-    </root>
+    <!-- ── Profile: LOCAL (mais verboso) ──────────────────────────────── -->
+    <springProfile name="local">
+        <root level="INFO">
+            <appender-ref ref="RollingFile" />
+            <appender-ref ref="Console" />
+        </root>
 
-    <!-- LOG "dev.financas" at DEBUG level -->
-    <logger name="dev.financas" level="DEBUG" additivity="false">
-        <appender-ref ref="RollingFile" />
-        <appender-ref ref="Console" />
-    </logger>
+        <logger name="dev.financas" level="DEBUG" additivity="false">
+            <appender-ref ref="RollingFile" />
+            <appender-ref ref="Console" />
+        </logger>
+    </springProfile>
+
+    <!-- ── Profile: HOMOLOG ───────────────────────────────────────────── -->
+    <springProfile name="homolog">
+        <root level="INFO">
+            <appender-ref ref="RollingFile" />
+            <appender-ref ref="Console" />
+        </root>
+
+        <logger name="dev.financas" level="INFO" additivity="false">
+            <appender-ref ref="RollingFile" />
+            <appender-ref ref="Console" />
+        </logger>
+    </springProfile>
+
+    <!-- ── Profile: PROD (mínimo necessário) ──────────────────────────── -->
+    <springProfile name="prod">
+        <root level="WARN">
+            <appender-ref ref="RollingFile" />
+            <appender-ref ref="Console" />
+        </root>
+
+        <logger name="dev.financas" level="INFO" additivity="false">
+            <appender-ref ref="RollingFile" />
+            <appender-ref ref="Console" />
+        </logger>
+
+        <!-- Silencia logs excessivos do Spring Security em prod -->
+        <logger name="org.springframework.security" level="WARN" />
+    </springProfile>
+
+    <!-- ── Default (nenhum profile ativo) ─────────────────────────────── -->
+    <springProfile name="default">
+        <root level="INFO">
+            <appender-ref ref="RollingFile" />
+            <appender-ref ref="Console" />
+        </root>
+
+        <logger name="dev.financas" level="DEBUG" additivity="false">
+            <appender-ref ref="RollingFile" />
+            <appender-ref ref="Console" />
+        </logger>
+    </springProfile>
 
 </configuration>

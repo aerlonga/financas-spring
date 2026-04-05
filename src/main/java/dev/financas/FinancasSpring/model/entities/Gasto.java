@@ -26,6 +26,9 @@ public class Gasto {
     @Column(nullable = false, length = 255)
     private String estabelecimento;
 
+    @Column(columnDefinition = "TEXT")
+    private String descricao;
+
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal valor;
 

@@ -24,6 +24,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -77,7 +78,7 @@ public class UsuarioController {
             @ApiResponse(responseCode = "200", description = "Usuário encontrado"),
             @ApiResponse(responseCode = "404", description = "Usuário não encontrado")
     })
-    // @PreAuthorize("@securityUtil.isOwnerOrAdmin(#id) or hasRole('ADMIN')")
+    @PreAuthorize("@securityUtil.isOwnerOrAdmin(#id) or hasRole('ADMIN')")
     public ResponseEntity<UsuarioResponseDTO> buscarPorId(@PathVariable Long id) {
         var usuario = usuarioService.findById(id);
         return ResponseEntity.ok(usuarioMapper.toResponseDTO(usuario));
@@ -109,7 +110,7 @@ public class UsuarioController {
             @ApiResponse(responseCode = "400", description = "Dados de entrada inválidos"),
             @ApiResponse(responseCode = "404", description = "Usuário não encontrado")
     })
-    // @PreAuthorize("@securityUtil.isOwnerOrAdmin(#id)")
+    @PreAuthorize("@securityUtil.isOwnerOrAdmin(#id)")
     public ResponseEntity<UsuarioResponseDTO> atualizar(
             @PathVariable Long id,
             @Valid @RequestBody UsuarioUpdateDTO dto) {
@@ -139,7 +140,7 @@ public class UsuarioController {
             @ApiResponse(responseCode = "200", description = "Detalhes do usuário encontrados"),
             @ApiResponse(responseCode = "404", description = "Usuário ou detalhes não encontrados")
     })
-    // @PreAuthorize("@securityUtil.isOwnerOrAdmin(#id)")
+    @PreAuthorize("@securityUtil.isOwnerOrAdmin(#id)")
     public ResponseEntity<DetalhesResponseDTO> buscarDetalhesPorUsuarioId(@PathVariable Long id) {
         var detalhes = usuarioDetalhesService.findByUsuarioId(id);
         return ResponseEntity.ok(usuarioDetalhesMapper.toResponseDTO(detalhes));
@@ -152,7 +153,7 @@ public class UsuarioController {
             @ApiResponse(responseCode = "400", description = "Dados de entrada inválidos"),
             @ApiResponse(responseCode = "404", description = "Usuário não encontrado")
     })
-    // @PreAuthorize("@securityUtil.isOwnerOrAdmin(#id)")
+    @PreAuthorize("@securityUtil.isOwnerOrAdmin(#id)")
     public ResponseEntity<DetalhesResponseDTO> criarOuAtualizarDetalhes(
             @PathVariable Long id,
             @Valid @RequestBody DetalhesUpdateDTO dto) {
@@ -168,7 +169,7 @@ public class UsuarioController {
             @ApiResponse(responseCode = "200", description = "Dados financeiros do usuário encontrados"),
             @ApiResponse(responseCode = "404", description = "Usuário ou dados financeiros não encontrados")
     })
-    // @PreAuthorize("@securityUtil.isOwnerOrAdmin(#id)")
+    @PreAuthorize("@securityUtil.isOwnerOrAdmin(#id)")
     public ResponseEntity<FinanceiroResponseDTO> buscarFinanceiroPorUsuarioId(@PathVariable Long id) {
         var financeiro = usuarioFinanceiroService.findByUsuarioId(id);
         return ResponseEntity.ok(usuarioFinanceiroMapper.toResponseDTO(financeiro));
@@ -181,7 +182,7 @@ public class UsuarioController {
             @ApiResponse(responseCode = "400", description = "Dados de entrada inválidos"),
             @ApiResponse(responseCode = "404", description = "Usuário não encontrado")
     })
-    // @PreAuthorize("@securityUtil.isOwnerOrAdmin(#id)")
+    @PreAuthorize("@securityUtil.isOwnerOrAdmin(#id)")
     public ResponseEntity<FinanceiroResponseDTO> criarOuAtualizarFinanceiro(
             @PathVariable Long id,
             @Valid @RequestBody FinanceiroUpdateDTO dto) {
@@ -197,7 +198,7 @@ public class UsuarioController {
             @ApiResponse(responseCode = "200", description = "Preferências do usuário encontradas"),
             @ApiResponse(responseCode = "404", description = "Usuário ou preferências não encontradas")
     })
-    // @PreAuthorize("@securityUtil.isOwnerOrAdmin(#id)")
+    @PreAuthorize("@securityUtil.isOwnerOrAdmin(#id)")
     public ResponseEntity<PreferenciasResponseDTO> buscarPreferenciasPorUsuarioId(@PathVariable Long id) {
         var preferencias = usuarioPreferenciasService.findByUsuarioId(id);
         return ResponseEntity.ok(usuarioPreferenciasMapper.toResponseDTO(preferencias));
@@ -210,7 +211,7 @@ public class UsuarioController {
             @ApiResponse(responseCode = "400", description = "Dados de entrada inválidos"),
             @ApiResponse(responseCode = "404", description = "Usuário não encontrado")
     })
-    // @PreAuthorize("@securityUtil.isOwnerOrAdmin(#id)")
+    @PreAuthorize("@securityUtil.isOwnerOrAdmin(#id)")
     public ResponseEntity<PreferenciasResponseDTO> criarOuAtualizarPreferencias(
             @PathVariable Long id,
             @Valid @RequestBody PreferenciasUpdateDTO dto) {

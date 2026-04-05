@@ -2,6 +2,7 @@ package dev.financas.FinancasSpring.services;
 
 import dev.financas.FinancasSpring.configuration.RabbitMQConfig;
 import dev.financas.FinancasSpring.model.dto.TelegramMessageDTO;
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -31,6 +32,12 @@ public class MessageQueueService {
 
     /** Scheduler dedicado para enviar o typing indicator periodicamente. */
     private final ScheduledExecutorService typingScheduler = Executors.newScheduledThreadPool(2);
+
+    @PreDestroy
+    public void destroy() {
+        log.info("[Queue] Desligando typingScheduler...");
+        typingScheduler.shutdownNow();
+    }
 
     /**
      * Publica uma mensagem na fila do RabbitMQ para processamento assíncrono.
